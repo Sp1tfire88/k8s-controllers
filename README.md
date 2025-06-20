@@ -23,3 +23,14 @@ Welcome to k8s-controller-tutorial CLI!
 13:07:14 ERR This is an error log env=dev version=v0.1.0
 Welcome to k8s-controller-tutorial CLI!
 ```
+# log entry in the output file
+```
+{"level":"trace","env":"dev","version":"v0.1.0","time":"2025-06-20T13:15:34Z","message":"This is a trace log"}
+{"level":"debug","env":"dev","version":"v0.1.0","time":"2025-06-20T13:15:34Z","message":"This is a debug log"}
+{"level":"info","env":"dev","version":"v0.1.0","time":"2025-06-20T13:15:34Z","message":"This is an info log"}
+{"level":"warn","env":"dev","version":"v0.1.0","time":"2025-06-20T13:15:34Z","message":"This is a warn log"}
+{"level":"error","env":"dev","version":"v0.1.0","time":"2025-06-20T13:15:34Z","message":"This is an error log"}
+{"level":"error","env":"dev","version":"v0.1.0","time":"2025-06-20T13:15:49Z","message":"This is an error log"}
+{"level":"error","env":"dev","version":"v0.1.0","time":"2025-06-20T13:15:57Z","message":"This is an error log"}
+{"level":"error","env":"dev","version":"v0.1.0","time":"2025-06-20T13:15:58Z","message":"This is an error log"}
+```
