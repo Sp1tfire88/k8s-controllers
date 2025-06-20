@@ -110,7 +110,7 @@ var rootCmd = &cobra.Command{
 
 // init регистрирует глобальные флаги
 func init() {
-	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", "set log level: trace, debug, info, warn, error, fatal, panic")
+	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", "set log level: trace, debug, info, warn, error")
 }
 
 // Execute запускает CLI
