@@ -51,9 +51,12 @@ Welcome to k8s-controller-tutorial CLI!
 ```
 
 and reading a variable from a file 'config.yaml'
-```log-level: error
+```
+log-level: error
 ```
 $ ./controller
+```
 Using config file: /workspaces/k8s-controllers/config.yaml
 13:34:21 ERR This is an error log env=dev version=v0.1.0
 Welcome to k8s-controller-tutorial CLI!
+```
