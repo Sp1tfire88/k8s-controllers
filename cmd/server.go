@@ -28,11 +28,25 @@ func init() {
 	viper.BindPFlag("port", serverCmd.Flags().Lookup("port"))
 }
 
+// func startFastHTTPServer() {
+// 	r := router.New()
+
+// 	// Обрабатывает GET и POST
+// 	r.ANY("/", logMiddleware(handler))
+
+// 	addr := fmt.Sprintf(":%d", viper.GetInt("port"))
+// 	log.Info().Msgf("Starting FastHTTP server on %s", addr)
+// 	if err := fasthttp.ListenAndServe(addr, r.Handler); err != nil {
+// 		log.Fatal().Err(err).Msg("Server failed")
+// 	}
+// }
+
 func startFastHTTPServer() {
 	r := router.New()
 
-	// Обрабатывает GET и POST
-	r.ANY("/", logMiddleware(handler))
+	r.GET("/", logMiddleware(homeHandler))
+	r.POST("/post", logMiddleware(postHandler))
+	r.GET("/health", logMiddleware(healthHandler))
 
 	addr := fmt.Sprintf(":%d", viper.GetInt("port"))
 	log.Info().Msgf("Starting FastHTTP server on %s", addr)
@@ -91,4 +105,28 @@ func handler(ctx *fasthttp.RequestCtx) {
 	default:
 		ctx.Error("Method Not Allowed", fasthttp.StatusMethodNotAllowed)
 	}
+}
+
+// обработчики маршрутов
+func homeHandler(ctx *fasthttp.RequestCtx) {
+	ctx.SetStatusCode(fasthttp.StatusOK)
+	ctx.SetBodyString("Welcome to the FastHTTP server!")
+}
+
+func postHandler(ctx *fasthttp.RequestCtx) {
+	body := ctx.PostBody()
+	log.Info().Bytes("body", body).Msg("Received POST data")
+	ctx.SetStatusCode(fasthttp.StatusOK)
+	ctx.SetBodyString("POST received")
+}
+
+func healthHandler(ctx *fasthttp.RequestCtx) {
+	ctx.SetStatusCode(fasthttp.StatusOK)
+	ctx.SetBodyString("OK")
+}
+
+func userHandler(ctx *fasthttp.RequestCtx) {
+	userID := ctx.UserValue("id").(string)
+	ctx.SetStatusCode(fasthttp.StatusOK)
+	ctx.SetBodyString(fmt.Sprintf("User ID: %s", userID))
 }
