@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"os"
-	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -14,7 +14,6 @@ import (
 // Глобальная переменная для флага уровня логирования
 var logLevel string
 
-// initLogger инициализирует zerolog с заданным уровнем логирования и форматированием
 // func initLogger(levelStr string) {
 // 	zerolog.TimeFieldFormat = time.RFC3339
 
@@ -23,13 +22,24 @@ var logLevel string
 // 		fmt.Fprintf(os.Stderr, "Invalid log level '%s', fallback to 'info'\n", levelStr)
 // 		level = zerolog.InfoLevel
 // 	}
-
 // 	zerolog.SetGlobalLevel(level)
 
-// 	log.Logger = zerolog.New(zerolog.ConsoleWriter{
+// 	// Файл для логов
+// 	logFile, err := os.OpenFile("logs/app.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+// 	if err != nil {
+// 		fmt.Fprintf(os.Stderr, "Could not open log file: %v\n", err)
+// 		logFile = os.Stdout
+// 	}
+
+// 	consoleWriter := zerolog.ConsoleWriter{
 // 		Out:        os.Stdout,
 // 		TimeFormat: "15:04:05",
-// 	}).With().
+// 	}
+
+// 	multi := zerolog.MultiLevelWriter(consoleWriter, logFile)
+
+// 	log.Logger = zerolog.New(multi).
+// 		With().
 // 		Timestamp().
 // 		Str("env", "dev").
 // 		Str("version", "v0.1.0").
@@ -37,30 +47,25 @@ var logLevel string
 // }
 
 func initLogger(levelStr string) {
-	zerolog.TimeFieldFormat = time.RFC3339
-
 	level, err := zerolog.ParseLevel(levelStr)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Invalid log level '%s', fallback to 'info'\n", levelStr)
 		level = zerolog.InfoLevel
 	}
+
 	zerolog.SetGlobalLevel(level)
 
-	// Файл для логов
-	logFile, err := os.OpenFile("logs/app.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Could not open log file: %v\n", err)
-		logFile = os.Stdout
+	var writer io.Writer
+
+	if level == zerolog.DebugLevel || level == zerolog.TraceLevel {
+		writer = os.Stdout // JSON лог
+	} else {
+		writer = zerolog.ConsoleWriter{
+			Out:        os.Stdout,
+			TimeFormat: "15:04:05",
+		}
 	}
 
-	consoleWriter := zerolog.ConsoleWriter{
-		Out:        os.Stdout,
-		TimeFormat: "15:04:05",
-	}
-
-	multi := zerolog.MultiLevelWriter(consoleWriter, logFile)
-
-	log.Logger = zerolog.New(multi).
+	log.Logger = zerolog.New(writer).
 		With().
 		Timestamp().
 		Str("env", "dev").

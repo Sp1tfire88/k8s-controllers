@@ -1,1 +1,2 @@
-log-level: error
+log-level: info
+port: 9000
