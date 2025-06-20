@@ -51,6 +51,5 @@ port: 9000
 ```
 $ go run main.go server
 Using config file: /workspaces/k8s-controllers/config.yaml
-Using config file: /workspaces/k8s-controllers/config.yaml
 {"level":"info","env":"dev","version":"v0.1.0","time":"2025-06-20T15:22:38Z","message":"Starting FastHTTP server on :9000"}
 ```
