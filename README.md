@@ -43,3 +43,14 @@ Using config file: /workspaces/k8s-controllers/config.yaml
 {"level":"info","env":"dev","version":"v0.1.0","body":"{\"foo\":\"bar\"}","time":"2025-06-20T15:09:54Z","message":"Received POST data"}
 {"level":"info","env":"dev","version":"v0.1.0","method":"POST","path":"/post","remote_ip":"127.0.0.1","request_id":"fcd4d4ae-0369-4f9f-9e48-6d06f6c2289b","latency":0.043429,"time":"2025-06-20T15:09:54Z","message":"Request handled"}
 ```
+or set log-info and port in `config.yaml`
+```
+log-level: debug
+port: 9000
+```
+```
+$ go run main.go server
+Using config file: /workspaces/k8s-controllers/config.yaml
+Using config file: /workspaces/k8s-controllers/config.yaml
+{"level":"info","env":"dev","version":"v0.1.0","time":"2025-06-20T15:22:38Z","message":"Starting FastHTTP server on :9000"}
+```

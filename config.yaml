@@ -1,2 +1,2 @@
-log-level: info
+log-level: debug
 port: 9000

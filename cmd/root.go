@@ -74,30 +74,63 @@ func initLogger(levelStr string) {
 }
 
 // rootCmd — корневая команда CLI
+
 var rootCmd = &cobra.Command{
 	Use:   "k8s-controller-tutorial",
-	Short: "A brief description of your application",
-	Long:  "This is a CLI application for demonstrating Cobra and Zerolog integration.",
+	Short: "CLI with Cobra + Zerolog + Viper",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		// initLogger(logLevel)
-		initLogger(viper.GetString("log-level"))
+		// 1. Чтение config.yaml
+		// viper.SetConfigName("config")
+		viper.SetConfigType("yaml")
+		viper.AddConfigPath(".")
+		viper.AddConfigPath("./configs")
+		viper.AddConfigPath("/etc/myapp/")
+		if err := viper.ReadInConfig(); err == nil {
+			fmt.Println("Using config file:", viper.ConfigFileUsed())
+		}
+
+		// 2. Переопределение через ENV
+		viper.AutomaticEnv()
+		viper.BindEnv("log-level", "LOG_LEVEL")
+
+		// 3. Теперь мы точно знаем актуальное значение
+		logLevel := viper.GetString("log-level")
+		initLogger(logLevel)
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Trace().Msg("This is a trace log")
-		// log.Debug().Msg("This is a debug log")
-		log.Debug().
-			Caller().
-			Msg("Detailed debug log")
-		// log.Info().Msg("This is an info log")
-		log.Info().
-			Str("handler", "root").
-			Msg("Request handled")
-		log.Warn().Msg("This is a warn log")
-		log.Error().Msg("This is an error log")
-
-		fmt.Println("Welcome to k8s-controller-tutorial CLI!")
+		log.Trace().Msg("trace")
+		log.Debug().Msg("debug")
+		log.Info().Msg("info")
+		log.Warn().Msg("warn")
+		log.Error().Msg("error")
+		fmt.Println("Welcome!")
 	},
 }
+
+// var rootCmd = &cobra.Command{
+// 	Use:   "k8s-controller-tutorial",
+// 	Short: "A brief description of your application",
+// 	Long:  "This is a CLI application for demonstrating Cobra and Zerolog integration.",
+// 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+// 		// initLogger(logLevel)
+// 		initLogger(viper.GetString("log-level"))
+// 	},
+// 	Run: func(cmd *cobra.Command, args []string) {
+// 		log.Trace().Msg("This is a trace log")
+// 		// log.Debug().Msg("This is a debug log")
+// 		log.Debug().
+// 			Caller().
+// 			Msg("Detailed debug log")
+// 		// log.Info().Msg("This is an info log")
+// 		log.Info().
+// 			Str("handler", "root").
+// 			Msg("Request handled")
+// 		log.Warn().Msg("This is a warn log")
+// 		log.Error().Msg("This is an error log")
+
+// 		fmt.Println("Welcome to k8s-controller-tutorial CLI!")
+// 	},
+// }
 
 // init регистрирует глобальные флаги
 // func init() {
@@ -128,9 +161,12 @@ func init() {
 	}
 
 	// Привязка флагов
-	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", "set log level: trace, debug, info, warn, error")
-	viper.BindEnv("log-level", "LOG_LEVEL")
+	// rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", "set log level: trace, debug, info, warn, error")
+	// viper.BindEnv("log-level", "LOG_LEVEL")
+	// viper.BindPFlag("log-level", rootCmd.PersistentFlags().Lookup("log-level"))
+	rootCmd.PersistentFlags().String("log-level", "info", "log level")
 	viper.BindPFlag("log-level", rootCmd.PersistentFlags().Lookup("log-level"))
+
 }
 
 // Execute запускает CLI
