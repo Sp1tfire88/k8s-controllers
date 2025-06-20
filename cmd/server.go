@@ -80,32 +80,33 @@ func logMiddleware(next fasthttp.RequestHandler) fasthttp.RequestHandler {
 			Msg("Request handled")
 	}
 }
-func handler(ctx *fasthttp.RequestCtx) {
-	switch string(ctx.Method()) {
-	case fasthttp.MethodPost:
-		body := ctx.PostBody()
-		log.Info().
-			Str("method", "POST").
-			Str("path", string(ctx.Path())).
-			Bytes("body", body).
-			Msg("Received POST")
 
-		ctx.SetStatusCode(fasthttp.StatusOK)
-		ctx.SetBodyString("POST received")
+// func handler(ctx *fasthttp.RequestCtx) {
+// 	switch string(ctx.Method()) {
+// 	case fasthttp.MethodPost:
+// 		body := ctx.PostBody()
+// 		log.Info().
+// 			Str("method", "POST").
+// 			Str("path", string(ctx.Path())).
+// 			Bytes("body", body).
+// 			Msg("Received POST")
 
-	case fasthttp.MethodGet:
-		log.Info().
-			Str("method", "GET").
-			Str("path", string(ctx.Path())).
-			Msg("Handled GET")
+// 		ctx.SetStatusCode(fasthttp.StatusOK)
+// 		ctx.SetBodyString("POST received")
 
-		ctx.SetStatusCode(fasthttp.StatusOK)
-		ctx.SetBodyString("Hello from FastHTTP")
+// 	case fasthttp.MethodGet:
+// 		log.Info().
+// 			Str("method", "GET").
+// 			Str("path", string(ctx.Path())).
+// 			Msg("Handled GET")
 
-	default:
-		ctx.Error("Method Not Allowed", fasthttp.StatusMethodNotAllowed)
-	}
-}
+// 		ctx.SetStatusCode(fasthttp.StatusOK)
+// 		ctx.SetBodyString("Hello from FastHTTP")
+
+// 	default:
+// 		ctx.Error("Method Not Allowed", fasthttp.StatusMethodNotAllowed)
+// 	}
+// }
 
 // обработчики маршрутов
 func homeHandler(ctx *fasthttp.RequestCtx) {
@@ -125,8 +126,8 @@ func healthHandler(ctx *fasthttp.RequestCtx) {
 	ctx.SetBodyString("OK")
 }
 
-func userHandler(ctx *fasthttp.RequestCtx) {
-	userID := ctx.UserValue("id").(string)
-	ctx.SetStatusCode(fasthttp.StatusOK)
-	ctx.SetBodyString(fmt.Sprintf("User ID: %s", userID))
-}
+// func userHandler(ctx *fasthttp.RequestCtx) {
+// 	userID := ctx.UserValue("id").(string)
+// 	ctx.SetStatusCode(fasthttp.StatusOK)
+// 	ctx.SetBodyString(fmt.Sprintf("User ID: %s", userID))
+// }
