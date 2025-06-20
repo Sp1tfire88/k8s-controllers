@@ -1,47 +1,53 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-
-*/
 package cmd
 
 import (
+	"fmt"
 	"os"
 
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
+// Глобальная переменная для флага debug
+var debug bool
 
+// Функция инициализации логгера с ConsoleWriter
+func initLogger(debug bool) {
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 
-// rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
-	Use:   "k8s-controllers",
-	Short: "CLI for practicing Kubernetes controllers",
-	Long: `k8s-controllers is a CLI tool
-designed to demonstrate basic and advanced examples of working with Kubernetes.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+	if debug {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	} else {
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	}
+
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
-	err := rootCmd.Execute()
-	if err != nil {
-		os.Exit(1)
-	}
+// Корневая команда
+var rootCmd = &cobra.Command{
+	Use:   "k8s-controller-tutorial",
+	Short: "A brief description of your application",
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		initLogger(debug) // инициализируем логгер перед выполнением любой команды
+	},
+	Run: func(cmd *cobra.Command, args []string) {
+		log.Info().Msg("This is an info log")
+		log.Debug().Msg("This is a debug log")
+		log.Trace().Msg("This is a trace log")
+		log.Warn().Msg("This is a warn log")
+		log.Error().Msg("This is an error log")
+
+		fmt.Println("Welcome to k8s-controller-tutorial CLI!")
+	},
 }
 
 func init() {
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.k8s-controllers.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// Регистрируем глобальный флаг --debug
+	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "enable debug logging")
 }
 
-
+func Execute() error {
+	return rootCmd.Execute()
+}
