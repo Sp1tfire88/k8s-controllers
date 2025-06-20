@@ -5,20 +5,21 @@ Zerolog
 go build -o controller
 
 # run
-./controller
+$ ./controller 
 ```
-12:52PM INF This is an info log
-12:52PM WRN This is a warn log
-12:52PM ERR This is an error log
+13:06:55 INF This is an info log env=dev version=v0.1.0
+13:06:55 WRN This is a warn log env=dev version=v0.1.0
+13:06:55 ERR This is an error log env=dev version=v0.1.0
 Welcome to k8s-controller-tutorial CLI!
 ```
 
 # run with debug output
- ./controller --debug
+./controller --log-level=trace
 ``` 
-12:52PM INF This is an info log
-12:52PM DBG This is a debug log
-12:52PM WRN This is a warn log
-12:52PM ERR This is an error log
+13:07:14 TRC This is a trace log env=dev version=v0.1.0
+13:07:14 DBG This is a debug log env=dev version=v0.1.0
+13:07:14 INF This is an info log env=dev version=v0.1.0
+13:07:14 WRN This is a warn log env=dev version=v0.1.0
+13:07:14 ERR This is an error log env=dev version=v0.1.0
 Welcome to k8s-controller-tutorial CLI!
 ```
