@@ -1,46 +1,3 @@
-// package cmd
-
-// import (
-// 	"fmt"
-
-// 	"github.com/fasthttp/router"
-// 	"github.com/rs/zerolog/log"
-// 	"github.com/spf13/cobra"
-// 	"github.com/spf13/viper"
-// 	"github.com/valyala/fasthttp"
-// )
-
-// var port int
-
-// var serverCmd = &cobra.Command{
-// 	Use:   "server",
-// 	Short: "Start a FastHTTP server",
-// 	Run: func(cmd *cobra.Command, args []string) {
-// 		startFastHTTPServer()
-// 	},
-// }
-
-// func init() {
-// 	rootCmd.AddCommand(serverCmd)
-// 	serverCmd.Flags().IntVarP(&port, "port", "p", 8080, "Port to run the server on")
-// 	viper.BindPFlag("port", serverCmd.Flags().Lookup("port"))
-// }
-
-// func startFastHTTPServer() {
-// 	r := router.New()
-
-// 	// простой обработчик
-// 	r.GET("/", func(ctx *fasthttp.RequestCtx) {
-// 		log.Info().Str("path", string(ctx.Path())).Msg("Handled request")
-// 		fmt.Fprintf(ctx, "Hello from FastHTTP on port %d!\n", viper.GetInt("port"))
-// 	})
-
-//		addr := fmt.Sprintf(":%d", viper.GetInt("port"))
-//		log.Info().Msgf("Starting FastHTTP server on %s", addr)
-//		if err := fasthttp.ListenAndServe(addr, r.Handler); err != nil {
-//			log.Fatal().Err(err).Msg("Server failed")
-//		}
-//	}
 package cmd
 
 import (
@@ -74,10 +31,8 @@ func init() {
 func startFastHTTPServer() {
 	r := router.New()
 
-	// Простой маршрут
-	r.GET("/", logMiddleware(func(ctx *fasthttp.RequestCtx) {
-		fmt.Fprintf(ctx, "Hello from FastHTTP on port %d!\n", viper.GetInt("port"))
-	}))
+	// Обрабатывает GET и POST
+	r.ANY("/", logMiddleware(handler))
 
 	addr := fmt.Sprintf(":%d", viper.GetInt("port"))
 	log.Info().Msgf("Starting FastHTTP server on %s", addr)
@@ -109,5 +64,31 @@ func logMiddleware(next fasthttp.RequestHandler) fasthttp.RequestHandler {
 			Str("request_id", requestID).
 			Dur("latency", duration).
 			Msg("Request handled")
+	}
+}
+func handler(ctx *fasthttp.RequestCtx) {
+	switch string(ctx.Method()) {
+	case fasthttp.MethodPost:
+		body := ctx.PostBody()
+		log.Info().
+			Str("method", "POST").
+			Str("path", string(ctx.Path())).
+			Bytes("body", body).
+			Msg("Received POST")
+
+		ctx.SetStatusCode(fasthttp.StatusOK)
+		ctx.SetBodyString("POST received")
+
+	case fasthttp.MethodGet:
+		log.Info().
+			Str("method", "GET").
+			Str("path", string(ctx.Path())).
+			Msg("Handled GET")
+
+		ctx.SetStatusCode(fasthttp.StatusOK)
+		ctx.SetBodyString("Hello from FastHTTP")
+
+	default:
+		ctx.Error("Method Not Allowed", fasthttp.StatusMethodNotAllowed)
 	}
 }

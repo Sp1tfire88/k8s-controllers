@@ -84,8 +84,14 @@ var rootCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		log.Trace().Msg("This is a trace log")
-		log.Debug().Msg("This is a debug log")
-		log.Info().Msg("This is an info log")
+		// log.Debug().Msg("This is a debug log")
+		log.Debug().
+			Caller().
+			Msg("Detailed debug log")
+		// log.Info().Msg("This is an info log")
+		log.Info().
+			Str("handler", "root").
+			Msg("Request handled")
 		log.Warn().Msg("This is a warn log")
 		log.Error().Msg("This is an error log")
 
