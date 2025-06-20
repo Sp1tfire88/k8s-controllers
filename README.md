@@ -2,7 +2,8 @@
 Zerolog
 
 ## build
-```go build -o controller
+```
+go build -o controller
 ```
 ## run
 $ ./controller 
@@ -41,7 +42,7 @@ logs\app.log
 ```
 go get github.com/spf13/viper
 ```
-
+reading variables from cli
 ```
 $ LOG_LEVEL=info ./controller
 13:29:19 INF This is an info log env=dev version=v0.1.0
