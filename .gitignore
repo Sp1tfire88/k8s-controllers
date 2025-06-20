@@ -1,2 +1,4 @@
 # Ignore binaries
 kubebuilder/bin/
+*.log
+*.swp
