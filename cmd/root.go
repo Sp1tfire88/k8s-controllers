@@ -8,6 +8,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // Глобальная переменная для флага уровня логирования
@@ -73,7 +74,8 @@ var rootCmd = &cobra.Command{
 	Short: "A brief description of your application",
 	Long:  "This is a CLI application for demonstrating Cobra and Zerolog integration.",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		initLogger(logLevel)
+		// initLogger(logLevel)
+		initLogger(viper.GetString("log-level"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		log.Trace().Msg("This is a trace log")
@@ -87,8 +89,37 @@ var rootCmd = &cobra.Command{
 }
 
 // init регистрирует глобальные флаги
+// func init() {
+// 	viper.AutomaticEnv() // автоматически считывает переменные окружения
+
+// 	// Привязываем ENV к флагу
+// 	viper.BindEnv("log-level", "LOG_LEVEL")
+
+// 	// Привязываем флаг cobra -> viper
+// 	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", "set log level: trace, debug, info, warn, error")
+// 	viper.BindPFlag("log-level", rootCmd.PersistentFlags().Lookup("log-level"))
+
+// }
+
 func init() {
+	// === Viper настройки ===
+	viper.SetConfigName("config")                         // имя файла без расширения
+	viper.SetConfigType("yaml")                           // тип конфигурационного файла
+	viper.AddConfigPath(".")                              // искать в текущей директории
+	viper.AddConfigPath("$HOME/.k8s-controller-tutorial") // или ~/.k8s-controller-tutorial
+	viper.AutomaticEnv()                                  // переменные окружения переопределяют
+
+	// Попробуем прочитать файл конфигурации
+	if err := viper.ReadInConfig(); err == nil {
+		fmt.Println("Using config file:", viper.ConfigFileUsed())
+	} else {
+		fmt.Println("No config file found or failed to read:", err)
+	}
+
+	// Привязка флагов
 	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", "set log level: trace, debug, info, warn, error")
+	viper.BindEnv("log-level", "LOG_LEVEL")
+	viper.BindPFlag("log-level", rootCmd.PersistentFlags().Lookup("log-level"))
 }
 
 // Execute запускает CLI
