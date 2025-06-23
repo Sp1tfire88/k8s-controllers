@@ -25,9 +25,9 @@ go tool cover -html=coverage/coverage.out -o coverage/coverage.html
 ```
 | Function              | Cover    | Comment                                          |
 | --------------------- | -------- | ---------------------------------------------------- |
-| `AddNewUser`          | ✅ 100%   | отлично                                              |
-| `GetUsers`            | ✅ 100%   | отлично                                              |
-| `initLogger`          | 🟡 89%   | почти, но не хватает ветвлений                       |
-| `Execute`             | ❌ 0%     | **не вызывается напрямую** в тестах                  |
-| `startFastHTTPServer` | ❌ 0%     | не тестируется (вызывает fasthttp.ListenAndServe)    |
-| `logMiddleware`       | ❌ 0%     | не покрыт (нужно протестировать в контексте сервера) |
+| `AddNewUser`          | ✅ 100%   | great                                              |
+| `GetUsers`            | ✅ 100%   | great                                              |
+| `initLogger`          | 🟡 89%    | almost, but not enough branches                      |
+| `Execute`             | ❌ 0%     | not called directly in tests                         |
+| `startFastHTTPServer` | ❌ 0%     | not tested (calls fasthttp.ListenAndServe)    |
+| `logMiddleware`       | ❌ 0%     | not covered (needs to be tested in server context) |
