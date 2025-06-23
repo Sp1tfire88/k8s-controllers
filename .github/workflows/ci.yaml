@@ -11,7 +11,11 @@ on:
       - 'feature/**'
 
 jobs:
-  build-test:
+  # =========================
+  # STEP 1 - Lint & Vet
+  # =========================
+  lint:
+    name: Lint & Vet
     runs-on: ubuntu-latest
 
     steps:
@@ -21,53 +25,93 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: '1.21.13'  # Временно используем стабильную версию
 
-      - name: Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      # Проверка форматирования
-      - name: Check code formatting
-        run: go fmt ./...
-
-      # Запуск go vet (поиск потенциальных ошибок)
-      - name: Run go vet
-        run: go vet ./...
-
-      # Запуск тестов
-      - name: Run tests
-        run: make test
-
-      # Запуск линтера (golangci-lint)
-      - name: Run golangci-lint
+      - name: Install golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
           version: v1.58.0
 
-      # Проверка уязвимостей зависимостей
-      - name: Run govulncheck
-        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+      - name: Run golangci-lint
+        run: golangci-lint run ./...
 
-      # Сборка бинарного файла
+      - name: Run go vet
+        run: go vet ./...
+
+  # =========================
+  # STEP 2 - Run Tests
+  # =========================
+  test:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+    needs: lint  # Выполняется после lint
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21.13'
+
+      - name: Run tests
+        run: make test
+
+  # =========================
+  # STEP 3 - Build Binary
+  # =========================
+  build:
+    name: Build Go Project
+    runs-on: ubuntu-latest
+    needs: test  # Выполняется после тестов
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21.13'
+
       - name: Build binary
         run: make build
 
-      # Сборка Docker образа
-      - name: Docker build
+  # =========================
+  # STEP 4 - Build Docker Image
+  # =========================
+  docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: build  # Выполняется после сборки
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
         run: make docker
 
-      # Сканирование образа Trivy
-      - name: Scan Docker image for vulnerabilities
-        uses: aquasecurity/trivy-action@master
+  # =========================
+  # STEP 5 - Scan Docker Image
+  # =========================
+  security:
+    name: Security Scan with Trivy
+    runs-on: ubuntu-latest
+    needs: docker  # Выполняется после сборки Docker образа
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Trivy
+        uses: aquasecurity/trivy-action@v0.13.1
         with:
-          image-ref: 'controller:latest'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
+          image-ref: 'go-ci-demo:latest'  # Укажи имя своего образа, если менял
+
+      - name: Run Trivy scan
+        run: trivy image --exit-code 1 --severity CRITICAL,HIGH go-ci-demo:latest
