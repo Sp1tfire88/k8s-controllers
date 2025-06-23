@@ -49,7 +49,6 @@ lint:
 
 coverage:
 	@mkdir -p $(COVERAGE_DIR)
-	go test -v -coverprofile=$(COVERAGE_FILE) $(shell go list ./... | grep -v '/etcd')
+	go test -v -coverprofile=$(COVERAGE_FILE) ./cmd
 	go tool cover -func=$(COVERAGE_FILE)
-	@echo "HTML report:"
-	@go tool cover -html=$(COVERAGE_FILE) -o $(COVERAGE_DIR)/coverage.html
+	go tool cover -html=$(COVERAGE_FILE) -o $(COVERAGE_DIR)/coverage.html

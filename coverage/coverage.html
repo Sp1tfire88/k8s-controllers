@@ -3,7 +3,7 @@
 <html>
 	<head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-		<title>k8s-controllers: Go Coverage Report</title>
+		<title>cmd: Go Coverage Report</title>
 		<style>
 			body {
 				background: black;
@@ -55,7 +55,11 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">github.com/Sp1tfire88/k8s-controllers/main.go (0.0%)</option>
+				<option value="file0">github.com/Sp1tfire88/k8s-controllers/cmd/go_basic.go (44.4%)</option>
+				
+				<option value="file1">github.com/Sp1tfire88/k8s-controllers/cmd/root.go (86.2%)</option>
+				
+				<option value="file2">github.com/Sp1tfire88/k8s-controllers/cmd/server.go (36.7%)</option>
 				
 				</select>
 			</div>
@@ -69,47 +73,285 @@
 		</div>
 		<div id="content">
 		
-		<pre class="file" id="file0" style="display: none">// package main
-
-// import (
-//         "os"
-
-//         "github.com/Sp1tfire88/k8s-controllers/cmd"
-//         "github.com/Sp1tfire88/k8s-controllers/pkg/logger"
-// )
-
-// func main() {
-//         // Проверь аргументы (например, --debug)
-//         debug := false
-//         for _, arg := range os.Args {
-//                 if arg == "--debug" {
-//                         debug = true
-//                         break
-//                 }
-//         }
-
-//         // Инициализируй логгер
-//         logger.Setup(debug)
-
-//         // Запуск CLI-команды
-//         cmd.Execute()
-// }
-
-/*
-Copyright © 2025 NAME HERE &lt;EMAIL ADDRESS&gt;
-*/
-package main
+		<pre class="file" id="file0" style="display: none">package cmd
 
 import (
-        "github.com/Sp1tfire88/k8s-controllers/cmd"
-        "github.com/rs/zerolog/log"
+        "fmt"
+
+        "github.com/spf13/cobra"
 )
 
-func main() <span class="cov0" title="0">{
-        if err := cmd.Execute(); err != nil </span><span class="cov0" title="0">{
-                log.Fatal().Err(err).Msg("command execution failed")
+var goBasicCmd = &amp;cobra.Command{
+        Use:   "go-basic",
+        Short: "Run golang basic code",
+        Run: func(cmd *cobra.Command, args []string) <span class="cov0" title="0">{
+                //Go basic code to run functions
+                k8s := Kubernetes{
+                        Name:    "k8s-demo-cluster",
+                        Version: "1.31",
+                        Users:   []string{"alex", "den"},
+                        NodeNumber: func() int </span><span class="cov0" title="0">{
+                                return 10
+                        }</span>,
+                }
+
+                //print users
+                <span class="cov0" title="0">k8s.GetUsers()
+
+                //add new user to struct
+                k8s.AddNewUser("anonymous")
+
+                //print users one more time
+                k8s.GetUsers()</span>
+        },
+}
+
+func init() <span class="cov8" title="1">{
+        rootCmd.AddCommand(goBasicCmd)
+
+}</span>
+
+// My go basic fucntions here
+type Kubernetes struct {
+        Name       string     `json:"name"`
+        Version    string     `json:"version"`
+        Users      []string   `json:"users,omitempty"`
+        NodeNumber func() int `json:"-"`
+}
+
+func (k8s Kubernetes) GetUsers() <span class="cov8" title="1">{
+        for _, user := range k8s.Users </span><span class="cov8" title="1">{
+                fmt.Println(user)
         }</span>
 }
+
+func (k8s *Kubernetes) AddNewUser(user string) <span class="cov8" title="1">{
+        k8s.Users = append(k8s.Users, user)
+}</pre>
+		
+		<pre class="file" id="file1" style="display: none">package cmd
+
+import (
+        "fmt"
+        "io"
+        "os"
+
+        "github.com/rs/zerolog"
+        "github.com/rs/zerolog/log"
+        "github.com/spf13/cobra"
+        "github.com/spf13/viper"
+)
+
+// initLogger инициализирует zerolog с учетом уровня логирования
+func initLogger(levelStr string) <span class="cov8" title="1">{
+        level, err := zerolog.ParseLevel(levelStr)
+        if err != nil </span><span class="cov0" title="0">{
+                level = zerolog.InfoLevel
+        }</span>
+
+        <span class="cov8" title="1">zerolog.SetGlobalLevel(level)
+
+        var writer io.Writer
+        if level &lt;= zerolog.DebugLevel </span><span class="cov8" title="1">{
+                writer = os.Stdout // JSON-лог
+        }</span> else<span class="cov8" title="1"> {
+                writer = zerolog.ConsoleWriter{
+                        Out:        os.Stdout,
+                        TimeFormat: "15:04:05",
+                }
+        }</span>
+
+        <span class="cov8" title="1">log.Logger = zerolog.New(writer).
+                With().
+                Timestamp().
+                Str("env", "dev").
+                Str("version", "v0.1.0").
+                Logger()</span>
+}
+
+// rootCmd — корневая команда CLI
+var rootCmd = &amp;cobra.Command{
+        Use:   "k8s-controller-tutorial",
+        Short: "CLI with Cobra + Zerolog + Viper",
+        PersistentPreRun: func(cmd *cobra.Command, args []string) <span class="cov8" title="1">{
+                level := viper.GetString("log-level")
+                initLogger(level)
+        }</span>,
+        Run: func(cmd *cobra.Command, args []string) <span class="cov8" title="1">{
+                log.Trace().Msg("trace")
+                log.Debug().Msg("debug")
+                log.Info().Msg("info")
+                log.Warn().Msg("warn")
+                log.Error().Msg("error")
+                fmt.Println("Welcome!")
+        }</span>,
+}
+
+func init() <span class="cov8" title="1">{
+        // === Viper настройки ===
+        viper.SetConfigName("config") // config.yaml
+        viper.SetConfigType("yaml")
+        viper.AddConfigPath(".")
+        viper.AddConfigPath("$HOME/.k8s-controller-tutorial")
+        viper.AutomaticEnv() // переменные окружения &gt; config.yaml
+
+        // Одинарный вывод конфиг-файла
+        cobra.OnInitialize(func() </span><span class="cov8" title="1">{
+                if err := viper.ReadInConfig(); err == nil </span><span class="cov0" title="0">{
+                        fmt.Println("Using config file:", viper.ConfigFileUsed())
+                }</span>
+        })
+
+        // Флаг и привязка через viper
+        <span class="cov8" title="1">rootCmd.PersistentFlags().String("log-level", "info", "set log level: trace, debug, info, warn, error")
+
+        if err := viper.BindPFlag("log-level", rootCmd.PersistentFlags().Lookup("log-level")); err != nil </span><span class="cov0" title="0">{
+                log.Fatal().Err(err).Msg("failed to bind log-level flag")
+        }</span>
+}
+
+// Execute запускает CLI
+func Execute() error <span class="cov0" title="0">{
+        return rootCmd.Execute()
+}</span>
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package cmd
+
+import (
+        "fmt"
+        "time"
+
+        "github.com/fasthttp/router"
+        "github.com/google/uuid"
+        "github.com/rs/zerolog/log"
+        "github.com/spf13/cobra"
+        "github.com/spf13/viper"
+        "github.com/valyala/fasthttp"
+)
+
+var port int
+
+var serverCmd = &amp;cobra.Command{
+        Use:   "server",
+        Short: "Start a FastHTTP server",
+        Run: func(cmd *cobra.Command, args []string) <span class="cov0" title="0">{
+                startFastHTTPServer()
+        }</span>,
+}
+
+func init() <span class="cov8" title="1">{
+        rootCmd.AddCommand(serverCmd)
+        serverCmd.Flags().IntVarP(&amp;port, "port", "p", 8080, "Port to run the server on")
+        // viper.BindPFlag("port", serverCmd.Flags().Lookup("port"))
+        if err := viper.BindPFlag("log-level", rootCmd.PersistentFlags().Lookup("log-level")); err != nil </span><span class="cov0" title="0">{
+                log.Fatal().Err(err).Msg("failed to bind log-level flag")
+        }</span>
+}
+
+// func startFastHTTPServer() {
+//         r := router.New()
+
+//         // Обрабатывает GET и POST
+//         r.ANY("/", logMiddleware(handler))
+
+//         addr := fmt.Sprintf(":%d", viper.GetInt("port"))
+//         log.Info().Msgf("Starting FastHTTP server on %s", addr)
+//         if err := fasthttp.ListenAndServe(addr, r.Handler); err != nil {
+//                 log.Fatal().Err(err).Msg("Server failed")
+//         }
+// }
+
+func startFastHTTPServer() <span class="cov0" title="0">{
+        r := router.New()
+
+        r.GET("/", logMiddleware(homeHandler))
+        r.POST("/post", logMiddleware(postHandler))
+        r.GET("/health", logMiddleware(healthHandler))
+
+        addr := fmt.Sprintf(":%d", viper.GetInt("port"))
+        log.Info().Msgf("Starting FastHTTP server on %s", addr)
+        if err := fasthttp.ListenAndServe(addr, r.Handler); err != nil </span><span class="cov0" title="0">{
+                log.Fatal().Err(err).Msg("Server failed")
+        }</span>
+}
+
+func logMiddleware(next fasthttp.RequestHandler) fasthttp.RequestHandler <span class="cov0" title="0">{
+        return func(ctx *fasthttp.RequestCtx) </span><span class="cov0" title="0">{
+                start := time.Now()
+
+                // Request ID (если есть)
+                requestID := string(ctx.Request.Header.Peek("X-Request-ID"))
+                if requestID == "" </span><span class="cov0" title="0">{
+                        requestID = uuid.New().String()
+                        ctx.Response.Header.Set("X-Request-ID", requestID)
+                }</span>
+
+                // Вызов обработчика
+                <span class="cov0" title="0">next(ctx)
+
+                duration := time.Since(start)
+
+                log.Info().
+                        Str("method", string(ctx.Method())).
+                        Str("path", string(ctx.Path())).
+                        Str("remote_ip", ctx.RemoteIP().String()).
+                        Str("request_id", requestID).
+                        Dur("latency", duration).
+                        Msg("Request handled")</span>
+        }
+}
+
+// func handler(ctx *fasthttp.RequestCtx) {
+//         switch string(ctx.Method()) {
+//         case fasthttp.MethodPost:
+//                 body := ctx.PostBody()
+//                 log.Info().
+//                         Str("method", "POST").
+//                         Str("path", string(ctx.Path())).
+//                         Bytes("body", body).
+//                         Msg("Received POST")
+
+//                 ctx.SetStatusCode(fasthttp.StatusOK)
+//                 ctx.SetBodyString("POST received")
+
+//         case fasthttp.MethodGet:
+//                 log.Info().
+//                         Str("method", "GET").
+//                         Str("path", string(ctx.Path())).
+//                         Msg("Handled GET")
+
+//                 ctx.SetStatusCode(fasthttp.StatusOK)
+//                 ctx.SetBodyString("Hello from FastHTTP")
+
+//         default:
+//                 ctx.Error("Method Not Allowed", fasthttp.StatusMethodNotAllowed)
+//         }
+// }
+
+// обработчики маршрутов
+func homeHandler(ctx *fasthttp.RequestCtx) <span class="cov8" title="1">{
+        ctx.SetStatusCode(fasthttp.StatusOK)
+        ctx.SetBodyString("Welcome to the FastHTTP server!")
+}</span>
+
+func postHandler(ctx *fasthttp.RequestCtx) <span class="cov8" title="1">{
+        body := ctx.PostBody()
+        log.Info().Bytes("body", body).Msg("Received POST data")
+        ctx.SetStatusCode(fasthttp.StatusOK)
+        ctx.SetBodyString("POST received")
+}</span>
+
+func healthHandler(ctx *fasthttp.RequestCtx) <span class="cov8" title="1">{
+        ctx.SetStatusCode(fasthttp.StatusOK)
+        ctx.SetBodyString("OK")
+}</span>
+
+// func userHandler(ctx *fasthttp.RequestCtx) {
+//         userID := ctx.UserValue("id").(string)
+//         ctx.SetStatusCode(fasthttp.StatusOK)
+//         ctx.SetBodyString(fmt.Sprintf("User ID: %s", userID))
+// }
 </pre>
 		
 		</div>
