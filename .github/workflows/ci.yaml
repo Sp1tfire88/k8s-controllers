@@ -32,8 +32,15 @@ jobs:
         with:
           version: latest
 
+      # - name: Run golangci-lint
+      #   run: golangci-lint run ./...
       - name: Run golangci-lint
-        run: golangci-lint run ./...
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.64.8
+          args: --out-format=colored-line-number
+
+
 
       - name: Run go vet
         run: go vet ./...

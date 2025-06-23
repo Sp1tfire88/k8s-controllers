@@ -29,8 +29,13 @@ Copyright © 2025 NAME HERE <EMAIL ADDRESS>
 */
 package main
 
-import "github.com/Sp1tfire88/k8s-controllers/cmd"
+import (
+	"github.com/Sp1tfire88/k8s-controllers/cmd"
+	"github.com/rs/zerolog/log"
+)
 
 func main() {
-	cmd.Execute()
+	if err := cmd.Execute(); err != nil {
+		log.Fatal().Err(err).Msg("command execution failed")
+	}
 }
