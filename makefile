@@ -1,34 +1,10 @@
-# # Makefile
-
-# APP_NAME = controller
-# BUILD_DIR = build
-
-# .PHONY: all build run clean test docker
-
-# all: build
-
-# build:
-# 	go build -o $(BUILD_DIR)/$(APP_NAME) main.go
-
-# run: build
-# 	./$(BUILD_DIR)/$(APP_NAME)
-
-# clean:
-# 	rm -rf $(BUILD_DIR)
-
-# test:
-# 	go test ./...
-
-# docker:
-# 	docker build -t sp1tfire88/$(APP_NAME):latest .
-
-# Makefile
-
 APP_NAME = controller
 BUILD_DIR = build
 GO_FILES = main.go
 DOCKER_IMAGE = sp1tfire88/$(APP_NAME)
 GO_VERSION = 1.21
+COVERAGE_DIR = coverage
+COVERAGE_FILE = $(COVERAGE_DIR)/coverage.out
 
 .PHONY: all build run clean test docker docker-run docker-push tidy lint
 
@@ -70,3 +46,10 @@ tidy:
 # Линтинг (можно вызывать в GitHub Actions)
 lint:
 	golangci-lint run
+
+coverage:
+	@mkdir -p $(COVERAGE_DIR)
+	go test -v -coverprofile=$(COVERAGE_FILE) $(shell go list ./... | grep -v '/etcd')
+	go tool cover -func=$(COVERAGE_FILE)
+	@echo "HTML report:"
+	@go tool cover -html=$(COVERAGE_FILE) -o $(COVERAGE_DIR)/coverage.html
