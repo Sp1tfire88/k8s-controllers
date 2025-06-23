@@ -21,13 +21,19 @@
 | `make clean`  | Clean build artifacts |
 
 ```
-go tool cover -html=coverage/coverage.out -o coverage/coverage.html
+go tool cover -func=coverage/coverage.out
 ```
-| Function              | Cover    | Comment                                          |
-| --------------------- | -------- | ---------------------------------------------------- |
-| `AddNewUser`          | ✅ 100%   | great                                              |
-| `GetUsers`            | ✅ 100%   | great                                              |
-| `initLogger`          | 🟡 89%    | almost, but not enough branches                      |
-| `Execute`             | ❌ 0%     | not called directly in tests                         |
-| `startFastHTTPServer` | ❌ 0%     | not tested (calls fasthttp.ListenAndServe)    |
-| `logMiddleware`       | ❌ 0%     | not covered (needs to be tested in server context) |
+## ✅ Test Coverage Summary
+
+| Function                | Coverage | Description                         |
+|------------------------|----------|-------------------------------------|
+| `initLogger`           | 88.9%    | Logging setup with Zerolog          |
+| `init` (root.go)       | 81.8%    | CLI init: flags, Viper, bindings    |
+| `Execute`              | 0.0%     | Cobra root command entrypoint       |
+| `init` (server.go)     | 75.0%    | Server command init & flag binding  |
+| `startFastHTTPServer`  | 0.0%     | Server start function (not tested)  |
+| `logMiddleware`        | 0.0%     | Request logging middleware          |
+| `homeHandler`          | 100.0%   | GET `/` handler                     |
+| `postHandler`          | 100.0%   | POST `/post` handler                |
+| `healthHandler`        | 100.0%   | GET `/health` handler               |
+> 💡 See full [HTML coverage report](./coverage/coverage.html)
