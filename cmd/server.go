@@ -25,7 +25,10 @@ var serverCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(serverCmd)
 	serverCmd.Flags().IntVarP(&port, "port", "p", 8080, "Port to run the server on")
-	viper.BindPFlag("port", serverCmd.Flags().Lookup("port"))
+	// viper.BindPFlag("port", serverCmd.Flags().Lookup("port"))
+	if err := viper.BindPFlag("log-level", rootCmd.PersistentFlags().Lookup("log-level")); err != nil {
+		log.Fatal().Err(err).Msg("failed to bind log-level flag")
+	}
 }
 
 // func startFastHTTPServer() {
