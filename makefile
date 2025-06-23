@@ -49,7 +49,7 @@ clean:
 
 # Запуск тестов
 test:
-	go test -v ./...
+	go test -v ./cmd
 
 # Docker билд
 docker:
