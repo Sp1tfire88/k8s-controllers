@@ -73,11 +73,10 @@ func init() {
 
 	// Флаг и привязка через viper
 	rootCmd.PersistentFlags().String("log-level", "info", "set log level: trace, debug, info, warn, error")
-	// _ = viper.BindPFlag("log-level", rootCmd.PersistentFlags().Lookup("log-level"))
+
 	if err := viper.BindPFlag("log-level", rootCmd.PersistentFlags().Lookup("log-level")); err != nil {
 		log.Fatal().Err(err).Msg("failed to bind log-level flag")
 	}
-
 }
 
 // Execute запускает CLI
