@@ -2,12 +2,12 @@ name: Go CI Pipeline
 
 on:
   push:
-    branches: 
-      - main, 
+    branches:
+      - main
       - 'feature/**'
   pull_request:
     branches:
-      - main, 
+      - main
       - 'feature/**'
 
 jobs:
@@ -21,7 +21,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: '1.24'
 
       - name: Cache Go modules
         uses: actions/cache@v4
@@ -33,11 +33,41 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+      # Проверка форматирования
+      - name: Check code formatting
+        run: go fmt ./...
+
+      # Запуск go vet (поиск потенциальных ошибок)
+      - name: Run go vet
+        run: go vet ./...
+
+      # Запуск тестов
       - name: Run tests
         run: make test
 
+      # Запуск линтера (golangci-lint)
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.58.0
+
+      # Проверка уязвимостей зависимостей
+      - name: Run govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+      # Сборка бинарного файла
       - name: Build binary
         run: make build
 
+      # Сборка Docker образа
       - name: Docker build
         run: make docker
+
+      # Сканирование образа Trivy
+      - name: Scan Docker image for vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'controller:latest'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
