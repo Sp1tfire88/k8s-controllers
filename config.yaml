@@ -1,2 +1,2 @@
-log-level: debug
-port: 9000
+log-level: trace
+port: 8080
