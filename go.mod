@@ -5,6 +5,8 @@ go 1.23.0
 
 toolchain go1.24.3
 
+// toolchain go1.24.3
+
 require (
 	github.com/fasthttp/router v1.5.4
 	github.com/google/uuid v1.6.0
