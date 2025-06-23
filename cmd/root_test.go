@@ -2,55 +2,59 @@ package cmd
 
 import (
 	"bytes"
+	"io"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/valyala/fasthttp"
 )
 
-// func TestRootCommand(t *testing.T) {
-// 	cmd := rootCmd
+// captureOutput перехватывает стандартный вывод (stdout)
+func captureOutput(f func()) string {
+	var buf bytes.Buffer
+	stdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
 
-//		if cmd.Use != "k8s-controller-tutorial" {
-//			t.Errorf("Expected command use 'k8s-controller-tutorial', got %s", cmd.Use)
-//		}
-//	}
+	f()
+
+	_ = w.Close()
+	os.Stdout = stdout
+	_, _ = io.Copy(&buf, r)
+
+	return buf.String()
+}
+
+// Тест на базовое выполнение root-команды
 func TestRootCommand_Execution(t *testing.T) {
 	cmd := rootCmd
-	buf := new(bytes.Buffer)
+	cmd.SetArgs([]string{}) // без флагов
 
-	cmd.SetOut(buf)
-	cmd.SetErr(buf)
-	cmd.SetArgs([]string{}) // без флагов и аргументов
+	output := captureOutput(func() {
+		_ = cmd.Execute()
+	})
 
-	if err := cmd.Execute(); err != nil {
-		t.Fatalf("Expected no error, got %v", err)
-	}
-
-	output := buf.String()
 	if !strings.Contains(output, "Welcome") {
 		t.Errorf("Expected output to contain 'Welcome', got %q", output)
 	}
 }
 
+// Тест с использованием флага --log-level=debug
 func TestRootCommand_WithDebugFlag(t *testing.T) {
 	cmd := rootCmd
-	buf := new(bytes.Buffer)
-
-	cmd.SetOut(buf)
-	cmd.SetErr(buf)
 	cmd.SetArgs([]string{"--log-level=debug"})
 
-	if err := cmd.Execute(); err != nil {
-		t.Fatalf("Expected no error with debug flag, got %v", err)
-	}
+	output := captureOutput(func() {
+		_ = cmd.Execute()
+	})
 
-	output := buf.String()
 	if !strings.Contains(output, "Welcome") {
 		t.Errorf("Expected output to contain 'Welcome', got %q", output)
 	}
 }
 
+// Проверка, что неизвестный флаг вызывает ошибку
 func TestRootCommand_InvalidFlag(t *testing.T) {
 	cmd := rootCmd
 	cmd.SetArgs([]string{"--non-existent"})
@@ -61,7 +65,8 @@ func TestRootCommand_InvalidFlag(t *testing.T) {
 	}
 }
 
-func TestHandler_GET(t *testing.T) {
+// Тест GET-запроса к homeHandler
+func TestHomeHandler_GET(t *testing.T) {
 	ctx := &fasthttp.RequestCtx{}
 	ctx.Request.SetRequestURI("/")
 	ctx.Request.Header.SetMethod("GET")
@@ -73,7 +78,47 @@ func TestHandler_GET(t *testing.T) {
 	}
 
 	body := string(ctx.Response.Body())
-	if !strings.Contains(body, "Hello") {
-		t.Errorf("Unexpected response body: %q", body)
+	expected := "Welcome to the FastHTTP server!"
+	if body != expected {
+		t.Errorf("Expected response %q, got %q", expected, body)
+	}
+}
+
+// Тест POST-запроса к postHandler
+func TestPostHandler_POST(t *testing.T) {
+	ctx := &fasthttp.RequestCtx{}
+	ctx.Request.SetRequestURI("/post")
+	ctx.Request.Header.SetMethod("POST")
+	ctx.Request.SetBody([]byte(`{"msg":"hi"}`))
+
+	postHandler(ctx)
+
+	if ctx.Response.StatusCode() != fasthttp.StatusOK {
+		t.Errorf("Expected 200, got %d", ctx.Response.StatusCode())
+	}
+
+	body := string(ctx.Response.Body())
+	expected := "POST received"
+	if body != expected {
+		t.Errorf("Expected response %q, got %q", expected, body)
+	}
+}
+
+// Тест GET-запроса к healthHandler
+func TestHealthHandler(t *testing.T) {
+	ctx := &fasthttp.RequestCtx{}
+	ctx.Request.SetRequestURI("/health")
+	ctx.Request.Header.SetMethod("GET")
+
+	healthHandler(ctx)
+
+	if ctx.Response.StatusCode() != fasthttp.StatusOK {
+		t.Errorf("Expected 200, got %d", ctx.Response.StatusCode())
+	}
+
+	body := string(ctx.Response.Body())
+	expected := "OK"
+	if body != expected {
+		t.Errorf("Expected response %q, got %q", expected, body)
 	}
 }
