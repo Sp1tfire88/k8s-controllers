@@ -44,7 +44,7 @@ var createCmd = &cobra.Command{
 			},
 		}
 
-		_, err := clientset.AppsV1().Deployments("default").Create(context.Background(), deployment, metav1.CreateOptions{})
+		_, err := clientset.AppsV1().Deployments(namespace).Create(context.Background(), deployment, metav1.CreateOptions{})
 		if err != nil {
 			log.Fatal().Err(err).Msg("Failed to create Deployment")
 		}

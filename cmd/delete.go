@@ -15,7 +15,7 @@ var deleteCmd = &cobra.Command{
 	Short: "Delete a Deployment",
 	Run: func(cmd *cobra.Command, args []string) {
 		clientset := mustGetClientSet()
-		err := clientset.AppsV1().Deployments("default").Delete(context.Background(), deleteName, metav1.DeleteOptions{})
+		err := clientset.AppsV1().Deployments(namespace).Delete(context.Background(), deleteName, metav1.DeleteOptions{})
 		if err != nil {
 			log.Fatal().Err(err).Msgf("Failed to delete Deployment %q", deleteName)
 		}

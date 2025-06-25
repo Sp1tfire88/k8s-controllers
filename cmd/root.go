@@ -11,6 +11,12 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Глобальные переменные
+var (
+	kubeconfig string
+	namespace  string
+)
+
 // initLogger инициализирует zerolog с учетом уровня логирования
 func initLogger(levelStr string) {
 	level, err := zerolog.ParseLevel(levelStr)
@@ -44,8 +50,10 @@ var rootCmd = &cobra.Command{
 	Short: "CLI with Cobra + Zerolog + Viper",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		level := viper.GetString("log-level")
+		namespace = viper.GetString("namespace")
 		initLogger(level)
 	},
+
 	Run: func(cmd *cobra.Command, args []string) {
 		log.Trace().Msg("trace")
 		log.Debug().Msg("debug")
@@ -71,12 +79,19 @@ func init() {
 		}
 	})
 
-	// Флаг и привязка через viper
+	// Лог уровень
 	rootCmd.PersistentFlags().String("log-level", "info", "set log level: trace, debug, info, warn, error")
-	rootCmd.PersistentFlags().StringVar(&kubeconfig, "kubeconfig", "", "Path to the kubeconfig file")
-
 	if err := viper.BindPFlag("log-level", rootCmd.PersistentFlags().Lookup("log-level")); err != nil {
 		log.Fatal().Err(err).Msg("failed to bind log-level flag")
+	}
+
+	// Kubeconfig путь
+	rootCmd.PersistentFlags().StringVar(&kubeconfig, "kubeconfig", "", "Path to the kubeconfig file")
+
+	// Namespace
+	rootCmd.PersistentFlags().StringVar(&namespace, "namespace", "default", "Kubernetes namespace to use")
+	if err := viper.BindPFlag("namespace", rootCmd.PersistentFlags().Lookup("namespace")); err != nil {
+		log.Fatal().Err(err).Msg("failed to bind namespace flag")
 	}
 }
 
