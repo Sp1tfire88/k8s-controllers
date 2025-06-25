@@ -16,7 +16,6 @@ import (
 
 var ErrNoConfigProvided = fmt.Errorf("either --kubeconfig or --in-cluster must be provided")
 
-// StartDeploymentInformer запускает SharedInformer для деплойментов в указанном namespace
 func StartDeploymentInformer(kubeconfigPath string, inCluster bool, namespace string) error {
 	if err := flag.Set("logtostderr", "true"); err != nil {
 		log.Warn().Err(err).Msg("Failed to set flag 'logtostderr'")
@@ -49,7 +48,6 @@ func StartDeploymentInformer(kubeconfigPath string, inCluster bool, namespace st
 
 	log.Trace().Str("namespace", namespace).Msg("Creating informer factory")
 	factory := informers.NewSharedInformerFactoryWithOptions(clientset, 10*time.Minute, informers.WithNamespace(namespace))
-
 	informer := factory.Apps().V1().Deployments().Informer()
 
 	handlerFuncs := cache.ResourceEventHandlerFuncs{
@@ -70,7 +68,9 @@ func StartDeploymentInformer(kubeconfigPath string, inCluster bool, namespace st
 		},
 	}
 
-	informer.AddEventHandler(handlerFuncs)
+	if _, err := informer.AddEventHandler(handlerFuncs); err != nil {
+		log.Warn().Err(err).Msg("Failed to add event handler to informer")
+	}
 
 	stop := make(chan struct{})
 	defer close(stop)
