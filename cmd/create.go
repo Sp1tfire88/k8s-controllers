@@ -57,5 +57,7 @@ func init() {
 	createCmd.Flags().StringVar(&createName, "name", "", "Name of the Deployment")
 	createCmd.Flags().StringVar(&createImage, "image", "nginx:latest", "Container image")
 	createCmd.Flags().Int32Var(&createReplicas, "replicas", 1, "Number of replicas")
-	createCmd.MarkFlagRequired("name")
+	if err := createCmd.MarkFlagRequired("name"); err != nil {
+		log.Warn().Err(err).Msg("Failed to mark 'name' as required")
+	}
 }

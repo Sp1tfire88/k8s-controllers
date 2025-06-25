@@ -26,5 +26,7 @@ var deleteCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(deleteCmd)
 	deleteCmd.Flags().StringVar(&deleteName, "name", "", "Name of the Deployment to delete")
-	deleteCmd.MarkFlagRequired("name")
+	if err := createCmd.MarkFlagRequired("name"); err != nil {
+		log.Warn().Err(err).Msg("Failed to mark 'name' as required")
+	}
 }

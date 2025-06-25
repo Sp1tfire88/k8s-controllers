@@ -85,3 +85,7 @@ coverage:
 
 docker:
 	docker build -t $(DOCKER_IMAGE):$(TAG) .
+
+# Линтинг (можно вызывать в GitHub Actions)
+lint:
+	golangci-lint run

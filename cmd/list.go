@@ -41,7 +41,9 @@ func listDeployments() error {
 
 	log.Debug().Msgf("Using kubeconfig: %s", kubeconfig)
 
-	flag.Set("logtostderr", "true") // suppress klog output to stderr
+	if err := flag.Set("logtostderr", "true"); err != nil {
+		log.Warn().Err(err).Msg("Failed to set flag 'logtostderr'")
+	}
 
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {

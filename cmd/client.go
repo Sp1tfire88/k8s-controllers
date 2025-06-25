@@ -16,7 +16,9 @@ func mustGetClientSet() *kubernetes.Clientset {
 		home := os.Getenv("HOME")
 		kubeconfigPath = filepath.Join(home, ".kube", "config")
 	}
-	flag.Set("logtostderr", "true")
+	if err := flag.Set("logtostderr", "true"); err != nil {
+		log.Warn().Err(err).Msg("Failed to set flag 'logtostderr'")
+	}
 
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 	if err != nil {
