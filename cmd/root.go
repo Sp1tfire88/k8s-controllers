@@ -15,6 +15,7 @@ import (
 var (
 	kubeconfig string
 	namespace  string
+	inCluster  bool
 )
 
 // initLogger инициализирует zerolog с учетом уровня логирования
@@ -93,6 +94,11 @@ func init() {
 	if err := viper.BindPFlag("namespace", rootCmd.PersistentFlags().Lookup("namespace")); err != nil {
 		log.Fatal().Err(err).Msg("failed to bind namespace flag")
 	}
+	rootCmd.PersistentFlags().BoolVar(&inCluster, "in-cluster", false, "Use in-cluster configuration")
+
+	rootCmd.PersistentFlags().IntVar(&port, "port", 8080, "Port to run the server")
+	viper.BindPFlag("port", rootCmd.PersistentFlags().Lookup("port"))
+
 }
 
 // Execute запускает CLI
