@@ -1,4 +1,4 @@
-# k8s-controllers
+# k8s-controller
 ## Deployment Informer with client-go
 
 create go functions:
