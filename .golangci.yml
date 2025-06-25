@@ -1,0 +1,24 @@
+run:
+  timeout: 3m
+  tests: true
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - gofmt
+    - gosimple
+    - staticcheck
+    - unused
+    - typecheck
+    - ineffassign
+
+issues:
+  exclude-use-default: false
+  exclude-dirs:
+    - ^etcd$
+
+output:
+  formats:
+    - format: colored-line-number
+    - format: github-actions
