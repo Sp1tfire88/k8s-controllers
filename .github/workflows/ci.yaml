@@ -1,41 +1,154 @@
+# name: Go CI Pipeline
+
+# on:
+#   push:
+#     branches:
+#       - main
+#       - 'feature/**'
+#   pull_request:
+#     branches:
+#       - main
+#       - 'feature/**'
+
+# jobs:
+#   # =========================
+#   # STEP 1 - Lint & Vet
+#   # =========================
+#   lint:
+#     name: Lint & Vet
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
+
+#       - name: Setup Go
+#         uses: actions/setup-go@v5
+#         with:
+#           go-version: '1.21.13'  # stable version
+
+#       - name: Install golangci-lint
+#         uses: golangci/golangci-lint-action@v3
+#         with:
+#           version: v1.64.8
+
+#       # - name: Run golangci-lint
+#       #   run: golangci-lint run ./...
+#       - name: Run golangci-lint
+#         uses: golangci/golangci-lint-action@v3
+#         with:
+#           version: v1.64.8
+#           args: --out-format=colored-line-number
+
+#       - name: Run go vet
+#         run: go vet ./...
+
+#   # =========================
+#   # STEP 2 - Run Tests
+#   # =========================
+#   test:
+#     name: Run Unit Tests
+#     runs-on: ubuntu-latest
+#     needs: lint  # after lint
+
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
+
+#       - name: Setup Go
+#         uses: actions/setup-go@v5
+#         with:
+#           go-version: '1.21.13'
+
+#       - name: Run tests
+#         run: make test
+
+#   # =========================
+#   # STEP 3 - Build Binary
+#   # =========================
+#   build:
+#     name: Build Go Project
+#     runs-on: ubuntu-latest
+#     needs: test  # after tests
+
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
+
+#       - name: Setup Go
+#         uses: actions/setup-go@v5
+#         with:
+#           go-version: '1.21.13'
+
+#       - name: Build binary
+#         run: make build
+
+#   # =========================
+#   # STEP 4 - Build Docker Image
+#   # =========================
+#   docker:
+#     name: Build Docker Image
+#     runs-on: ubuntu-latest
+#     needs: build  # after build
+
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
+
+#       - name: Setup Docker Buildx
+#         uses: docker/setup-buildx-action@v3
+
+#       - name: Build Docker image
+#         run: make docker
+
+#   # =========================
+#   # STEP 5 - Scan Docker Image
+#   # =========================
+#   # =========================
+#   # STEP 5 - Scan Docker Image
+#   # =========================
+#   security:
+#     name: Security Scan with Trivy
+#     runs-on: ubuntu-latest
+#     needs: docker
+
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
+
+#       - name: Build Docker image with SHA tag
+#         run: |
+#           docker build -t go-ci-demo:${{ github.sha }} .
+
+#       - name: Run Trivy vulnerability scanner
+#         uses: aquasecurity/trivy-action@0.28.0
+#         with:
+#           image-ref: 'go-ci-demo:${{ github.sha }}'
+#           format: 'table'
+#           exit-code: '1'
+#           ignore-unfixed: true
+#           vuln-type: 'os,library'
+#           severity: 'MEDIUM,HIGH,CRITICAL'
 name: Go CI Pipeline
 
 on:
   push:
-    branches:
-      - main
-      - 'feature/**'
+    branches: [ main, 'feature/**' ]
   pull_request:
-    branches:
-      - main
-      - 'feature/**'
+    branches: [ main, 'feature/**' ]
 
 jobs:
-  # =========================
-  # STEP 1 - Lint & Vet
-  # =========================
+
   lint:
     name: Lint & Vet
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version: '1.21.13'  # stable version
+          go-version: '1.21.13'
 
-      - name: Install golangci-lint
-        uses: golangci/golangci-lint-action@v3
-        with:
-          version: v1.64.8
-
-      # - name: Run golangci-lint
-      #   run: golangci-lint run ./...
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v3
+      - uses: golangci/golangci-lint-action@v3
         with:
           version: v1.64.8
           args: --out-format=colored-line-number
@@ -43,87 +156,51 @@ jobs:
       - name: Run go vet
         run: go vet ./...
 
-  # =========================
-  # STEP 2 - Run Tests
-  # =========================
   test:
-    name: Run Unit Tests
+    name: Run Tests
     runs-on: ubuntu-latest
-    needs: lint  # after lint
-
+    needs: lint
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: '1.21.13'
+      - run: make test
 
-      - name: Run tests
-        run: make test
-
-  # =========================
-  # STEP 3 - Build Binary
-  # =========================
   build:
-    name: Build Go Project
+    name: Build Binary
     runs-on: ubuntu-latest
-    needs: test  # after tests
-
+    needs: test
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: '1.21.13'
+      - run: make build
 
-      - name: Build binary
-        run: make build
-
-  # =========================
-  # STEP 4 - Build Docker Image
-  # =========================
   docker:
     name: Build Docker Image
     runs-on: ubuntu-latest
-    needs: build  # after build
-
+    needs: build
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - run: make docker
 
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image
-        run: make docker
-
-  # =========================
-  # STEP 5 - Scan Docker Image
-  # =========================
-  # =========================
-  # STEP 5 - Scan Docker Image
-  # =========================
   security:
     name: Security Scan with Trivy
     runs-on: ubuntu-latest
     needs: docker
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Build Docker image with SHA tag
-        run: |
-          docker build -t go-ci-demo:${{ github.sha }} .
+      - name: Rebuild controller:latest for scan
+        run: docker build -t controller:latest .
 
-      - name: Run Trivy vulnerability scanner
+      - name: Run Trivy scan
         uses: aquasecurity/trivy-action@0.28.0
         with:
-          image-ref: 'go-ci-demo:${{ github.sha }}'
+          image-ref: 'controller:latest'
           format: 'table'
           exit-code: '1'
           ignore-unfixed: true
