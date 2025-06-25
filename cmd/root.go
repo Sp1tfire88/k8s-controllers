@@ -97,7 +97,9 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&inCluster, "in-cluster", false, "Use in-cluster configuration")
 
 	rootCmd.PersistentFlags().IntVar(&port, "port", 8080, "Port to run the server")
-	viper.BindPFlag("port", rootCmd.PersistentFlags().Lookup("port"))
+	if err := viper.BindPFlag("port", rootCmd.PersistentFlags().Lookup("port")); err != nil {
+		log.Warn().Err(err).Msg("Failed to bind port flag")
+	}
 
 }
 
