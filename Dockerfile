@@ -14,4 +14,6 @@ WORKDIR /
 COPY --from=builder /app/controller .
 
 USER nonroot:nonroot
+
+EXPOSE 8080
 ENTRYPOINT ["/controller"]

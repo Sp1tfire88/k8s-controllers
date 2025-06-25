@@ -1,39 +1,43 @@
 # k8s-controllers
-🔐 GitHub Actions CI
+List Kubernetes Deployments with client-go
 
-| Job        | Purpose                                    |
-| ---------- | ------------------------------------------ |
-| `lint`     | Code formatting, `go vet`, `golangci-lint` |
-| `test`     | Unit testing (`go test`)                   |
-| `build`    | Compile project and validate binary        |
-| `docker`   | Build Docker image                         |
-| `security` | Trivy security scan of image               |
+intall dependencies
+``
+go get k8s.io/client-go@v0.30.0
+go get k8s.io/apimachinery@v0.30.0
+``
+create cmd/list.go
 
-📄 Makefile Commands
-| Command       | Description           |
-| ------------- | --------------------- |
-| `make build`  | Build Go binary       |
-| `make run`    | Run the binary        |
-| `make test`   | Run unit tests        |
-| `make docker` | Build Docker image    |
-| `make lint`   | Run golangci-lint     |
-| `make tidy`   | Run `go mod tidy`     |
-| `make clean`  | Clean build artifacts |
-
+create simple-deployment
 ```
-go tool cover -func=coverage/coverage.out
+sudo PATH=$PATH:/usr/sbin kubebuilder/bin/kubectl apply -f - <<EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:latest
+          securityContext:
+            privileged: true
+EOF
 ```
-## ✅ Test Coverage Summary
-
-| Function                | Coverage | Description                         |
-|------------------------|----------|-------------------------------------|
-| `initLogger`           | 88.9%    | Logging setup with Zerolog          |
-| `init` (root.go)       | 81.8%    | CLI init: flags, Viper, bindings    |
-| `Execute`              | 0.0%     | Cobra root command entrypoint       |
-| `init` (server.go)     | 75.0%    | Server command init & flag binding  |
-| `startFastHTTPServer`  | 0.0%     | Server start function (not tested)  |
-| `logMiddleware`        | 0.0%     | Request logging middleware          |
-| `homeHandler`          | 100.0%   | GET `/` handler                     |
-| `postHandler`          | 100.0%   | POST `/post` handler                |
-| `healthHandler`        | 100.0%   | GET `/health` handler               |
-> 💡 See full [HTML coverage report](./coverage/coverage.html)
+check go run main.go list --kubeconfig ./kubeconfig
+```
+ go run main.go list --kubeconfig ./kubeconfig
+Using config file: /workspaces/k8s-controllers/config.yaml
+{"level":"debug","env":"dev","version":"v0.1.0","time":"2025-06-25T08:52:06Z","message":"Using kubeconfig: ./kubeconfig"}
+{"level":"info","env":"dev","version":"v0.1.0","time":"2025-06-25T08:52:06Z","message":"Connected to cluster. Listing deployments..."}
+{"level":"info","env":"dev","version":"v0.1.0","time":"2025-06-25T08:52:06Z","message":"Found 1 deployment(s):"}
+📦 nginx-deployment
+```
