@@ -1,34 +1,21 @@
 # k8s-controller
-## Deployment Informer with client-go
+## /deployments JSON API Endpoint
 
-create go functions:
-* informer.go
+$ go run main.go server --log-level trace
 
-✅ Features:
-* Watches 
-* Deployment add/update/delete events.
-* Supports both kubeconfig and in-cluster configuration.
-* Reads configuration from config.yaml:
+$ go run main.go create --name test-nginx --image nginx:1.25.2 --replicas 1
 ```
-log-level: trace
-port: 8080
-
-kubeconfig: "/home/codespace/.kube/config"
-informer:
-  enabled: true
-
+Using config file: /workspaces/k8s-controllers/config.yaml
+{"level":"warn","env":"dev","version":"v0.1.0","error":"no such flag -logtostderr","time":"2025-06-25T13:48:46Z","message":"Failed to set flag 'logtostderr'"}
+{"level":"info","env":"dev","version":"v0.1.0","time":"2025-06-25T13:48:46Z","message":"✅ Deployment \"test-nginx\" created"}
 ```
-Start the informer
-
-go run main.go server --log-level trace
+$ go run main.go create --name redis --image redis --replicas 1
 ```
-{"level":"trace","env":"dev","version":"v0.1.0","deployment":"test-nginx","time":"2025-06-25T13:29:16Z","message":"📦 Deployment ADDED"}
+Using config file: /workspaces/k8s-controllers/config.yaml
+{"level":"warn","env":"dev","version":"v0.1.0","error":"no such flag -logtostderr","time":"2025-06-25T13:49:06Z","message":"Failed to set flag 'logtostderr'"}
+{"level":"info","env":"dev","version":"v0.1.0","time":"2025-06-25T13:49:06Z","message":"✅ Deployment \"redis\" created"}
 ```
-And when scaling:
+$ curl http://localhost:8080/deployments
 ```
-{"level":"info","env":"dev","version":"v0.1.0","deployment":"test-nginx","from":1,"to":2,"time":"2025-06-25T13:29:46Z","message":"🔁 Deployment scaled"}
-```
-kubectl delete deployment test-nginx
-```
-{"level":"trace","env":"dev","version":"v0.1.0","deployment":"test-nginx","time":"2025-06-25T13:31:21Z","message":"🗑️ Deployment DELETED"}
+["test-nginx","redis"]
 ```

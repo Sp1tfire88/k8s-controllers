@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/valyala/fasthttp"
+	appsv1 "k8s.io/api/apps/v1"
 )
 
 var port int
@@ -25,27 +27,12 @@ var serverCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(serverCmd)
 	serverCmd.Flags().IntVarP(&port, "port", "p", 8080, "Port to run the server on")
-	// viper.BindPFlag("port", serverCmd.Flags().Lookup("port"))
 	if err := viper.BindPFlag("log-level", rootCmd.PersistentFlags().Lookup("log-level")); err != nil {
 		log.Fatal().Err(err).Msg("failed to bind log-level flag")
 	}
 }
 
-// func startFastHTTPServer() {
-// 	r := router.New()
-
-// 	// Обрабатывает GET и POST
-// 	r.ANY("/", logMiddleware(handler))
-
-// 	addr := fmt.Sprintf(":%d", viper.GetInt("port"))
-// 	log.Info().Msgf("Starting FastHTTP server on %s", addr)
-// 	if err := fasthttp.ListenAndServe(addr, r.Handler); err != nil {
-// 		log.Fatal().Err(err).Msg("Server failed")
-// 	}
-// }
-
 func startFastHTTPServer() {
-	// Запускаем informer, если он включен в конфиге
 	if err := StartDeploymentInformerFromConfig(); err != nil {
 		log.Warn().Err(err).Msg("Informer not started")
 	}
@@ -54,6 +41,7 @@ func startFastHTTPServer() {
 	r.GET("/", logMiddleware(homeHandler))
 	r.POST("/post", logMiddleware(postHandler))
 	r.GET("/health", logMiddleware(healthHandler))
+	r.GET("/deployments", logMiddleware(deploymentsHandler)) // ✅ Новый endpoint
 
 	addr := fmt.Sprintf(":%d", viper.GetInt("port"))
 	log.Info().Msgf("Starting FastHTTP server on %s", addr)
@@ -65,17 +53,12 @@ func startFastHTTPServer() {
 func logMiddleware(next fasthttp.RequestHandler) fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
 		start := time.Now()
-
-		// Request ID (если есть)
 		requestID := string(ctx.Request.Header.Peek("X-Request-ID"))
 		if requestID == "" {
 			requestID = uuid.New().String()
 			ctx.Response.Header.Set("X-Request-ID", requestID)
 		}
-
-		// Вызов обработчика
 		next(ctx)
-
 		duration := time.Since(start)
 
 		log.Info().
@@ -88,34 +71,6 @@ func logMiddleware(next fasthttp.RequestHandler) fasthttp.RequestHandler {
 	}
 }
 
-// func handler(ctx *fasthttp.RequestCtx) {
-// 	switch string(ctx.Method()) {
-// 	case fasthttp.MethodPost:
-// 		body := ctx.PostBody()
-// 		log.Info().
-// 			Str("method", "POST").
-// 			Str("path", string(ctx.Path())).
-// 			Bytes("body", body).
-// 			Msg("Received POST")
-
-// 		ctx.SetStatusCode(fasthttp.StatusOK)
-// 		ctx.SetBodyString("POST received")
-
-// 	case fasthttp.MethodGet:
-// 		log.Info().
-// 			Str("method", "GET").
-// 			Str("path", string(ctx.Path())).
-// 			Msg("Handled GET")
-
-// 		ctx.SetStatusCode(fasthttp.StatusOK)
-// 		ctx.SetBodyString("Hello from FastHTTP")
-
-// 	default:
-// 		ctx.Error("Method Not Allowed", fasthttp.StatusMethodNotAllowed)
-// 	}
-// }
-
-// обработчики маршрутов
 func homeHandler(ctx *fasthttp.RequestCtx) {
 	ctx.SetStatusCode(fasthttp.StatusOK)
 	ctx.SetBodyString("Welcome to the FastHTTP server!")
@@ -133,8 +88,30 @@ func healthHandler(ctx *fasthttp.RequestCtx) {
 	ctx.SetBodyString("OK")
 }
 
-// func userHandler(ctx *fasthttp.RequestCtx) {
-// 	userID := ctx.UserValue("id").(string)
-// 	ctx.SetStatusCode(fasthttp.StatusOK)
-// 	ctx.SetBodyString(fmt.Sprintf("User ID: %s", userID))
-// }
+// ✅ Новый обработчик JSON API
+func deploymentsHandler(ctx *fasthttp.RequestCtx) {
+	store := GetDeploymentStore()
+	if store == nil {
+		ctx.SetStatusCode(fasthttp.StatusServiceUnavailable)
+		ctx.SetBodyString(`{"error":"deployment cache not ready"}`)
+		return
+	}
+
+	var names []string
+	for _, obj := range store.List() {
+		if d, ok := obj.(*appsv1.Deployment); ok {
+			names = append(names, d.GetName())
+		}
+	}
+
+	resp, err := json.Marshal(names)
+	if err != nil {
+		ctx.SetStatusCode(fasthttp.StatusInternalServerError)
+		ctx.SetBodyString(`{"error":"failed to serialize deployments"}`)
+		return
+	}
+
+	ctx.SetContentType("application/json")
+	ctx.SetStatusCode(fasthttp.StatusOK)
+	ctx.SetBody(resp)
+}

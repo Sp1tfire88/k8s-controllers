@@ -1,4 +1,3 @@
-// informer.go
 package cmd
 
 import (
@@ -16,6 +15,15 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 )
+
+var (
+	deploymentStore cache.Store
+)
+
+// GetDeploymentStore возвращает ссылку на informer cache
+func GetDeploymentStore() cache.Store {
+	return deploymentStore
+}
 
 func StartDeploymentInformerFromConfig() error {
 	if err := flag.Set("logtostderr", "true"); err != nil {
@@ -69,6 +77,8 @@ func StartDeploymentInformerFromConfig() error {
 	factory := informers.NewSharedInformerFactoryWithOptions(clientset, resyncPeriod, informers.WithNamespace(ns))
 	informer := factory.Apps().V1().Deployments().Informer()
 
+	deploymentStore = informer.GetStore()
+
 	_, handlerErr := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			if d, ok := obj.(metav1.Object); ok {
@@ -85,7 +95,6 @@ func StartDeploymentInformerFromConfig() error {
 
 			oldReplicas := int32(1)
 			newReplicas := int32(1)
-
 			if oldDep.Spec.Replicas != nil {
 				oldReplicas = *oldDep.Spec.Replicas
 			}
@@ -116,10 +125,10 @@ func StartDeploymentInformerFromConfig() error {
 	}
 
 	stop := make(chan struct{})
-	defer close(stop)
+	// defer close(stop)
 
 	log.Info().Msg("🚀 Starting deployment informer")
-	informer.Run(stop)
+	go informer.Run(stop)
 
 	return nil
 }
