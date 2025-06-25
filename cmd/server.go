@@ -45,15 +45,11 @@ func init() {
 // }
 
 func startFastHTTPServer() {
-	// 💡 Вызов информера ДО запуска HTTP-сервера
-	go func() {
-		err := StartDeploymentInformer(kubeconfig, inCluster, namespace)
-		if err != nil {
-			log.Fatal().Err(err).Msg("❌ Failed to start deployment informer")
-		}
-	}()
+	// Запускаем informer, если он включен в конфиге
+	if err := StartDeploymentInformerFromConfig(); err != nil {
+		log.Warn().Err(err).Msg("Informer not started")
+	}
 
-	// HTTP routes
 	r := router.New()
 	r.GET("/", logMiddleware(homeHandler))
 	r.POST("/post", logMiddleware(postHandler))
@@ -61,7 +57,6 @@ func startFastHTTPServer() {
 
 	addr := fmt.Sprintf(":%d", viper.GetInt("port"))
 	log.Info().Msgf("Starting FastHTTP server on %s", addr)
-
 	if err := fasthttp.ListenAndServe(addr, r.Handler); err != nil {
 		log.Fatal().Err(err).Msg("Server failed")
 	}
