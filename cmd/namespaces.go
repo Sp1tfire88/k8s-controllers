@@ -30,16 +30,22 @@ var namespacesCmd = &cobra.Command{
 
 		log.Info().Msgf("Found %d namespace(s):", len(namespaces.Items))
 
-		// Таблица для форматированного вывода
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-		fmt.Fprintln(w, "NAME\tSTATUS\tAGE")
+		if _, err := fmt.Fprintln(w, "NAME\tSTATUS\tAGE"); err != nil {
+			log.Warn().Err(err).Msg("Failed to print header")
+		}
 
 		now := time.Now()
 		for _, ns := range namespaces.Items {
 			age := now.Sub(ns.CreationTimestamp.Time).Round(time.Second)
-			fmt.Fprintf(w, "%s\t%s\t%s\n", ns.Name, ns.Status.Phase, formatDuration(age))
+			if _, err := fmt.Fprintf(w, "%s\t%s\t%s\n", ns.Name, ns.Status.Phase, formatDuration(age)); err != nil {
+				log.Warn().Err(err).Msg("Failed to print namespace row")
+			}
 		}
-		w.Flush()
+
+		if err := w.Flush(); err != nil {
+			log.Warn().Err(err).Msg("Failed to flush writer")
+		}
 	},
 }
 
@@ -47,7 +53,7 @@ func init() {
 	rootCmd.AddCommand(namespacesCmd)
 }
 
-// formatDuration форматирует время в стиле "3d4h" или "15m"
+// formatDuration форматирует продолжительность в стиле "3d4h" или "15m"
 func formatDuration(d time.Duration) string {
 	days := int(d.Hours()) / 24
 	hours := int(d.Hours()) % 24
