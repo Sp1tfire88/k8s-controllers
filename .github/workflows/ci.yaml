@@ -151,7 +151,7 @@ jobs:
       - uses: golangci/golangci-lint-action@v3
         with:
           version: v1.64.8
-          args: --out-format=colored-line-number
+          args: --out-format=colored-line-number --timeout=3m
 
       - name: Run go vet
         run: go vet ./...

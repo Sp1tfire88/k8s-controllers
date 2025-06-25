@@ -6,7 +6,10 @@ intall dependencies:
 go get k8s.io/client-go@v0.30.0
 go get k8s.io/apimachinery@v0.30.0
 ```
-create cmd/list.go
+create go functions:
+* cmd/list.go
+* cmd/create.go
+* cmd/delete.go
 
 $ go run main.go create --kubeconfig ~/.kube/config --name nginx-app --image nginx:latest --replicas 2
 ```
