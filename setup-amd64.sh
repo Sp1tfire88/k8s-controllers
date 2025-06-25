@@ -285,8 +285,13 @@ start() {
     fi
 
     # Set up kubelet kubeconfig
-    sudo cp /root/.kube/config /var/lib/kubelet/kubeconfig
+    mkdir -p ~/.kube
+    sudo cp /root/.kube/config ~/.kube/config
+    sudo chown $USER ~/.kube/config
     export KUBECONFIG=~/.kube/config
+
+    # sudo cp /root/.kube/config /var/lib/kubelet/kubeconfig
+    # export KUBECONFIG=~/.kube/config
     cp /tmp/sa.pub /tmp/ca.crt
 
     # Create service account and configmap if they don't exist
