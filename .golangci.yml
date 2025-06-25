@@ -1,6 +1,12 @@
 run:
   timeout: 3m
   tests: true
+  build-tags: []
+  modules-download-mode: readonly
+
+# issues:
+#   exclude-use-default: false
+#   exclude-dirs-use-default: false
 
 linters:
   enable:
@@ -13,12 +19,6 @@ linters:
     - typecheck
     - ineffassign
 
-issues:
-  exclude-use-default: false
-  exclude-dirs:
-    - ^etcd$
-
 output:
   formats:
     - format: colored-line-number
-    - format: github-actions
