@@ -6,3 +6,10 @@ kubeconfig: "/home/codespace/.kube/config"
 informer:
   enabled: true
 
+clusters:
+  - name: cluster-a
+    kubeconfig: "/home/user/.kube/cluster-a.yaml"
+    namespace: default
+  - name: cluster-b
+    kubeconfig: "/home/user/.kube/cluster-b.yaml"
+    namespace: kube-system
