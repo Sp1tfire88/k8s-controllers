@@ -11,14 +11,24 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/valyala/fasthttp"
+
 	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
+
+	"github.com/Sp1tfire88/k8s-controllers/pkg/controller"
 )
 
 var port int
 
 var serverCmd = &cobra.Command{
 	Use:   "server",
-	Short: "Start a FastHTTP server",
+	Short: "Start a FastHTTP server with controller-runtime",
 	Run: func(cmd *cobra.Command, args []string) {
 		startFastHTTPServer()
 	},
@@ -27,26 +37,59 @@ var serverCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(serverCmd)
 	serverCmd.Flags().IntVarP(&port, "port", "p", 8080, "Port to run the server on")
+
 	if err := viper.BindPFlag("log-level", rootCmd.PersistentFlags().Lookup("log-level")); err != nil {
 		log.Fatal().Err(err).Msg("failed to bind log-level flag")
 	}
 }
 
 func startFastHTTPServer() {
-	if err := StartDeploymentInformerFromConfig(); err != nil {
-		log.Warn().Err(err).Msg("Informer not started")
+	// --- 1. Setup controller-runtime logger ---
+	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+
+	// --- 2. Setup controller-runtime manager ---
+	scheme := runtime.NewScheme()
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(appsv1.AddToScheme(scheme))
+
+	cfg := ctrl.GetConfigOrDie()
+	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+		Scheme: scheme,
+		Metrics: server.Options{
+			BindAddress: ":8081", // metrics server
+		},
+	})
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to start controller-runtime manager")
 	}
 
+	// --- 3. Register the Deployment controller ---
+	if err := (&controller.DeploymentReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		log.Fatal().Err(err).Msg("Failed to setup Deployment controller")
+	}
+
+	// --- 4. Start manager in background ---
+	go func() {
+		log.Info().Msg("🔧 Starting controller-runtime manager")
+		if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+			log.Fatal().Err(err).Msg("controller-runtime manager exited")
+		}
+	}()
+
+	// --- 5. Start FastHTTP server ---
 	r := router.New()
 	r.GET("/", logMiddleware(homeHandler))
 	r.POST("/post", logMiddleware(postHandler))
 	r.GET("/health", logMiddleware(healthHandler))
-	r.GET("/deployments", logMiddleware(deploymentsHandler)) // ✅ Новый endpoint
+	r.GET("/deployments", logMiddleware(deploymentsHandler))
 
 	addr := fmt.Sprintf(":%d", viper.GetInt("port"))
-	log.Info().Msgf("Starting FastHTTP server on %s", addr)
+	log.Info().Msgf("🚀 Starting FastHTTP server on %s", addr)
 	if err := fasthttp.ListenAndServe(addr, r.Handler); err != nil {
-		log.Fatal().Err(err).Msg("Server failed")
+		log.Fatal().Err(err).Msg("FastHTTP server failed")
 	}
 }
 
@@ -88,7 +131,7 @@ func healthHandler(ctx *fasthttp.RequestCtx) {
 	ctx.SetBodyString("OK")
 }
 
-// ✅ Новый обработчик JSON API
+// deploymentsHandler returns cached Deployment names from informer (if informer used)
 func deploymentsHandler(ctx *fasthttp.RequestCtx) {
 	store := GetDeploymentStore()
 	if store == nil {
