@@ -2,3 +2,4 @@
 kubebuilder/bin/
 *.log
 *.swp
+etcd/

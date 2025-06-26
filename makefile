@@ -76,6 +76,7 @@ clean:
 
 test:
 	go test -v ./...
+	go test ./pkg/controller
 
 coverage:
 	@mkdir -p $(COVERAGE_DIR)
