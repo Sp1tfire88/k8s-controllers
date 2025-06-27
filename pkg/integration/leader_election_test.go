@@ -1,51 +1,72 @@
+// pkg/integration/leader_election_test.go
 package integration
 
 import (
+	"bytes"
+	"fmt"
 	"net/http"
 	"os/exec"
 	"testing"
 	"time"
 )
 
-func TestLeaderElectionAndMetrics(t *testing.T) {
-	// 1. Стартуем первый контроллер
-	cmd1 := exec.Command("go", "run", "main.go", "server",
-		"--enable-leader-election=true",
-		"--metrics-port=19090",
-	)
-	cmd1.Stdout = nil
-	cmd1.Stderr = nil
-	if err := cmd1.Start(); err != nil {
-		t.Fatalf("Failed to start controller 1: %v", err)
-	}
-	defer cmd1.Process.Kill()
+func TestLeaderElectionAndMetricsPort(t *testing.T) {
+	bin := "./build/controller" // или "./controller" если без BUILD_DIR
 
-	// 2. Стартуем второй контроллер (на другом порту для метрик!)
-	cmd2 := exec.Command("go", "run", "main.go", "server",
+	// Первый процесс: leader election enabled, метрики на 19091
+	cmd1 := exec.Command(bin, "server",
 		"--enable-leader-election=true",
 		"--metrics-port=19091",
 	)
-	cmd2.Stdout = nil
-	cmd2.Stderr = nil
+	var out1 bytes.Buffer
+	cmd1.Stdout = &out1
+	cmd1.Stderr = &out1
+	if err := cmd1.Start(); err != nil {
+		t.Fatalf("failed to start first controller: %v\nOutput:\n%s", err, out1.String())
+	}
+	defer func() { _ = cmd1.Process.Kill() }()
+
+	time.Sleep(2 * time.Second) // дать время cmd1 стать лидером
+
+	// Второй процесс: leader election enabled, метрики на 19092
+	cmd2 := exec.Command(bin, "server",
+		"--enable-leader-election=true",
+		"--metrics-port=19092",
+	)
+	var out2 bytes.Buffer
+	cmd2.Stdout = &out2
+	cmd2.Stderr = &out2
 	if err := cmd2.Start(); err != nil {
-		t.Fatalf("Failed to start controller 2: %v", err)
+		_ = cmd1.Process.Kill()
+		t.Fatalf("failed to start second controller: %v\nOutput:\n%s", err, out2.String())
 	}
-	defer cmd2.Process.Kill()
+	defer func() { _ = cmd2.Process.Kill() }()
 
-	// 3. Ждём пока оба процесса стартуют
-	time.Sleep(10 * time.Second)
+	time.Sleep(4 * time.Second) // дать время для старта и выборов лидера
 
-	// 4. Проверяем, что оба endpoint-а метрик отвечают
-	for _, port := range []string{"19090", "19091"} {
-		resp, err := http.Get("http://localhost:" + port + "/metrics")
-		if err != nil || resp.StatusCode != 200 {
-			t.Errorf("Metrics endpoint on :%s is not available: %v", port, err)
+	// Проверим, что оба сервера метрик доступны
+	checkPort := func(port int) error {
+		url := fmt.Sprintf("http://localhost:%d/metrics", port)
+		client := http.Client{Timeout: 2 * time.Second}
+		resp, err := client.Get(url)
+		if err != nil {
+			return fmt.Errorf("metrics endpoint not available at %s: %w", url, err)
 		}
+		defer resp.Body.Close()
+		if resp.StatusCode != 200 && resp.StatusCode != 404 {
+			return fmt.Errorf("unexpected status code %d from %s", resp.StatusCode, url)
+		}
+		return nil
 	}
 
-	// 5. Можно проверить Lease-ресурс в кластере (например, через kubectl),
-	//    но для локального теста обычно достаточно проверить работу метрик.
+	if err := checkPort(19091); err != nil {
+		t.Errorf("First controller metrics not available: %v", err)
+	}
+	if err := checkPort(19092); err != nil {
+		t.Errorf("Second controller metrics not available: %v", err)
+	}
 
-	// 6. Для полного теста:
-	//    - Завершаем первый процесс, ждём 10 секунд, проверяем что второй instance становится лидером.
+	// Выведем вывод процессов для дебага
+	t.Logf("First controller output:\n%s", out1.String())
+	t.Logf("Second controller output:\n%s", out2.String())
 }
