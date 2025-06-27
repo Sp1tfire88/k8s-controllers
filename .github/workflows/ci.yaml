@@ -1,134 +1,3 @@
-# name: Go CI Pipeline
-
-# on:
-#   push:
-#     branches:
-#       - main
-#       - 'feature/**'
-#   pull_request:
-#     branches:
-#       - main
-#       - 'feature/**'
-
-# jobs:
-#   # =========================
-#   # STEP 1 - Lint & Vet
-#   # =========================
-#   lint:
-#     name: Lint & Vet
-#     runs-on: ubuntu-latest
-
-#     steps:
-#       - name: Checkout repository
-#         uses: actions/checkout@v4
-
-#       - name: Setup Go
-#         uses: actions/setup-go@v5
-#         with:
-#           go-version: '1.21.13'  # stable version
-
-#       - name: Install golangci-lint
-#         uses: golangci/golangci-lint-action@v3
-#         with:
-#           version: v1.64.8
-
-#       # - name: Run golangci-lint
-#       #   run: golangci-lint run ./...
-#       - name: Run golangci-lint
-#         uses: golangci/golangci-lint-action@v3
-#         with:
-#           version: v1.64.8
-#           args: --out-format=colored-line-number
-
-#       - name: Run go vet
-#         run: go vet ./...
-
-#   # =========================
-#   # STEP 2 - Run Tests
-#   # =========================
-#   test:
-#     name: Run Unit Tests
-#     runs-on: ubuntu-latest
-#     needs: lint  # after lint
-
-#     steps:
-#       - name: Checkout repository
-#         uses: actions/checkout@v4
-
-#       - name: Setup Go
-#         uses: actions/setup-go@v5
-#         with:
-#           go-version: '1.21.13'
-
-#       - name: Run tests
-#         run: make test
-
-#   # =========================
-#   # STEP 3 - Build Binary
-#   # =========================
-#   build:
-#     name: Build Go Project
-#     runs-on: ubuntu-latest
-#     needs: test  # after tests
-
-#     steps:
-#       - name: Checkout repository
-#         uses: actions/checkout@v4
-
-#       - name: Setup Go
-#         uses: actions/setup-go@v5
-#         with:
-#           go-version: '1.21.13'
-
-#       - name: Build binary
-#         run: make build
-
-#   # =========================
-#   # STEP 4 - Build Docker Image
-#   # =========================
-#   docker:
-#     name: Build Docker Image
-#     runs-on: ubuntu-latest
-#     needs: build  # after build
-
-#     steps:
-#       - name: Checkout repository
-#         uses: actions/checkout@v4
-
-#       - name: Setup Docker Buildx
-#         uses: docker/setup-buildx-action@v3
-
-#       - name: Build Docker image
-#         run: make docker
-
-#   # =========================
-#   # STEP 5 - Scan Docker Image
-#   # =========================
-#   # =========================
-#   # STEP 5 - Scan Docker Image
-#   # =========================
-#   security:
-#     name: Security Scan with Trivy
-#     runs-on: ubuntu-latest
-#     needs: docker
-
-#     steps:
-#       - name: Checkout repository
-#         uses: actions/checkout@v4
-
-#       - name: Build Docker image with SHA tag
-#         run: |
-#           docker build -t go-ci-demo:${{ github.sha }} .
-
-#       - name: Run Trivy vulnerability scanner
-#         uses: aquasecurity/trivy-action@0.28.0
-#         with:
-#           image-ref: 'go-ci-demo:${{ github.sha }}'
-#           format: 'table'
-#           exit-code: '1'
-#           ignore-unfixed: true
-#           vuln-type: 'os,library'
-#           severity: 'MEDIUM,HIGH,CRITICAL'
 name: Go CI Pipeline
 
 on:
@@ -139,67 +8,48 @@ on:
 
 jobs:
 
-  lint:
-    name: Lint & Vet
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.21.13'
+  # lint:
+  #   name: Lint & Vet
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-go@v5
+  #       with:
+  #         go-version: '1.21.13'
 
-      - uses: golangci/golangci-lint-action@v3
-        with:
-          version: v1.64.8
-          args: --out-format=colored-line-number --timeout=3m
+  #     - uses: golangci/golangci-lint-action@v3
+  #       with:
+  #         version: v1.64.8
+  #         args: --out-format=colored-line-number --timeout=3m
 
-      - name: Run go vet
-        run: go vet ./...
+  #     - name: Run go vet
+  #       run: go vet ./...
 
-  test:
-    name: Run Tests
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.21.13'
-      - run: make test
+  # test:
+  #   name: Run Tests
+  #   runs-on: ubuntu-latest
+  #   needs: lint
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-go@v5
+  #       with:
+  #         go-version: '1.21.13'
+  #     - run: make test
 
-  kustomize-validate:
-    name: Validate Kustomize manifests
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install kustomize, yamllint
-        run: |
-          if ! command -v kustomize &>/dev/null; then
-            curl -sSfL https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.2/kustomize_v5.4.2_linux_amd64.tar.gz | tar -xz
-            sudo mv kustomize /usr/local/bin/kustomize
-          else
-            echo "kustomize already installed: $(kustomize version)"
-          fi
-
-      - name: Kustomize build base
-        run: kustomize build kustomize/base
-
-  helm-lint:
-    name: Helm Lint
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Helm
-        run: |
-          curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
-          chmod 700 get_helm.sh
-          ./get_helm.sh
-      - name: Lint Helm chart
-        run: |
-          helm lint helm/controller
+  # helm-lint:
+  #   name: Helm Lint
+  #   runs-on: ubuntu-latest
+  #   needs: test
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Install Helm
+  #       run: |
+  #         curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+  #         chmod 700 get_helm.sh
+  #         ./get_helm.sh
+  #     - name: Lint Helm chart
+  #       run: |
+  #         helm lint helm/controller
 
   build:
     name: Build Binary
@@ -219,24 +69,60 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
-      - run: make docker
+      - run: |
+          IMAGE="ghcr.io/${{ github.repository }}:${{ github.sha }}"
+          docker build -t $IMAGE .
+          # docker push $IMAGE
 
-  security:
-    name: Security Scan with Trivy
+  patch-kustomize-image:
+    name: Patch kustomize image tag
+    runs-on: ubuntu-latest
+    needs: docker
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch kustomization.yaml with image name and tag
+        run: |
+          IMAGE="ghcr.io/${{ github.repository }}"
+          TAG="${{ github.sha }}"
+          sed -i "s|newName:.*|newName: $IMAGE|" kustomize/overlays/dev/kustomization.yaml
+          sed -i "s|newTag:.*|newTag: $TAG|" kustomize/overlays/dev/kustomization.yaml
+
+
+  # security:
+  #   name: Security Scan with Trivy
+  #   runs-on: ubuntu-latest
+  #   needs: docker
+  #   steps:
+  #     - uses: actions/checkout@v4
+
+  #     - name: Rebuild controller:latest for scan
+  #       run: docker build -t controller:latest .
+
+  #     - name: Run Trivy scan
+  #       uses: aquasecurity/trivy-action@0.28.0
+  #       with:
+  #         image-ref: 'controller:latest'
+  #         format: 'table'
+  #         exit-code: '1'
+  #         ignore-unfixed: true
+  #         vuln-type: 'os,library'
+  #         severity: 'MEDIUM,HIGH,CRITICAL'
+
+  kustomize-validate:
+    name: Validate Kustomize manifests
     runs-on: ubuntu-latest
     needs: docker
     steps:
       - uses: actions/checkout@v4
 
-      - name: Rebuild controller:latest for scan
-        run: docker build -t controller:latest .
+      - name: Install kustomize, yamllint
+        run: |
+          if ! command -v kustomize &>/dev/null; then
+            curl -sSfL https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.2/kustomize_v5.4.2_linux_amd64.tar.gz | tar -xz
+            sudo mv kustomize /usr/local/bin/kustomize
+          else
+            echo "kustomize already installed: $(kustomize version)"
+          fi
 
-      - name: Run Trivy scan
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          image-ref: 'controller:latest'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'MEDIUM,HIGH,CRITICAL'
+      - name: Kustomize build base
+        run: kustomize build overlays/dev/

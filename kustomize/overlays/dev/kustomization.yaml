@@ -1,11 +1,16 @@
 resources:
   - ../../base
 
-configMapGenerator:
-  - name: controller-config
-    literals:
-      - log-level=debug
-      - metrics-port=9090
+images:
+  - name: your-dockerhub-username/controller  
+    newName: ghcr.io/your-org/controller      
+    newTag: latest                           
 
-patches:
-  - path: patch-deployment.yaml
+# configMapGenerator:
+#   - name: controller-config
+#     literals:
+#       - log-level=debug
+#       - metrics-port=9090
+
+# # patches:
+# #   - path: patch-deployment.yaml
