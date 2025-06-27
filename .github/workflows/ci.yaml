@@ -170,19 +170,25 @@ jobs:
   kustomize-validate:
     name: Validate Kustomize manifests
     runs-on: ubuntu-latest
+    needs: test
     steps:
       - uses: actions/checkout@v4
 
       - name: Install kustomize
         run: |
-          curl -sSfL https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.2/kustomize_v5.4.2_linux_amd64.tar.gz | tar -xz
-          sudo mv kustomize /usr/local/bin/kustomize
+          if ! command -v kustomize &>/dev/null; then
+            curl -sSfL https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.2/kustomize_v5.4.2_linux_amd64.tar.gz | tar -xz
+            sudo mv kustomize /usr/local/bin/kustomize
+          else
+            echo "kustomize already installed: $(kustomize version)"
+          fi
 
       - name: Build and validate base manifests
         run: kustomize build kustomize/base | kubectl apply --dry-run=client -f -
 
       - name: Build and validate dev overlay
         run: kustomize build kustomize/overlays/dev | kubectl apply --dry-run=client -f -
+
 
       # - name: Build and validate prod overlay
       #   run: kustomize build kustomize/overlays/prod | kubectl apply --dry-run=client -f -
