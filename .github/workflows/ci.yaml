@@ -126,5 +126,5 @@ jobs:
             echo "kustomize already installed: $(kustomize version)"
           fi
 
-      - name: Kustomize build base
-        run: kustomize build overlays/dev/
+      - name: Kustomize build dev overlay
+        run: kustomize build kustomize/overlays/dev/
