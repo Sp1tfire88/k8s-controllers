@@ -175,8 +175,12 @@ jobs:
 
       - name: Install kustomize, yamllint
         run: |
-          curl -sSfL https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.2/kustomize_v5.4.2_linux_amd64.tar.gz | tar -xz
-          sudo mv kustomize /usr/local/bin/kustomize
+          if ! command -v kustomize &>/dev/null; then
+            curl -sSfL https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.2/kustomize_v5.4.2_linux_amd64.tar.gz | tar -xz
+            sudo mv kustomize /usr/local/bin/kustomize
+          else
+            echo "kustomize already installed: $(kustomize version)"
+          fi
           pip install yamllint
 
       - name: Kustomize build base
