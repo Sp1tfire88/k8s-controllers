@@ -6,3 +6,7 @@ kubeconfig: "/home/codespace/.kube/config"
 informer:
   enabled: true
 
+namespace: "default"
+
+enableLeaderElection: false
+metricsPort: 9091

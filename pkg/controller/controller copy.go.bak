@@ -15,13 +15,21 @@ import (
 type DeploymentReconciler struct {
 	client.Client
 	Scheme    *runtime.Scheme
-	Namespace string
+	Namespace string // добавлено: имя namespace для фильтрации
 }
 
 // Reconcile logs each reconcile event.
 func (r *DeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	// Фильтрация по namespace (для поддержки кастомного namespace через конфиг/флаг)
+	if r.Namespace != "" && req.Namespace != r.Namespace {
+		return ctrl.Result{}, nil
+	}
+
 	logger := log.FromContext(ctx)
-	logger.Info("🔁 Reconcile triggered", "name", req.Name, "namespace", req.Namespace)
+	logger.Info("🔁 Reconcile triggered",
+		"name", req.Name,
+		"namespace", req.Namespace,
+	)
 	return ctrl.Result{}, nil
 }
 

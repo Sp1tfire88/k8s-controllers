@@ -3,3 +3,4 @@ kubebuilder/bin/
 *.log
 *.swp
 etcd/
+scripts/

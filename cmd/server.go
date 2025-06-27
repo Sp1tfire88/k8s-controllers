@@ -24,7 +24,12 @@ import (
 	"github.com/Sp1tfire88/k8s-controllers/pkg/controller"
 )
 
-var port int
+var (
+	port            int
+	leaderElection  bool
+	metricsPort     int
+	configNamespace string
+)
 
 var serverCmd = &cobra.Command{
 	Use:   "server",
@@ -36,18 +41,40 @@ var serverCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(serverCmd)
-	serverCmd.Flags().IntVarP(&port, "port", "p", 8080, "Port to run the server on")
 
-	if err := viper.BindPFlag("log-level", rootCmd.PersistentFlags().Lookup("log-level")); err != nil {
-		log.Fatal().Err(err).Msg("failed to bind log-level flag")
-	}
+	// CLI flags (все можно задать через конфиг)
+	serverCmd.Flags().IntVarP(&port, "port", "p", 8080, "Port to run the server on")
+	serverCmd.Flags().BoolVar(&leaderElection, "enable-leader-election", true, "Enable leader election for controller manager")
+	serverCmd.Flags().IntVar(&metricsPort, "metrics-port", 8081, "Port for controller manager metrics endpoint")
+	serverCmd.Flags().StringVar(&configNamespace, "namespace", "default", "Kubernetes namespace to watch")
+
+	// Bind к viper (поддержка конфига и CLI одновременно)
+	_ = viper.BindPFlag("port", serverCmd.Flags().Lookup("port"))
+	_ = viper.BindPFlag("enableLeaderElection", serverCmd.Flags().Lookup("enable-leader-election"))
+	_ = viper.BindPFlag("metricsPort", serverCmd.Flags().Lookup("metrics-port"))
+	_ = viper.BindPFlag("namespace", serverCmd.Flags().Lookup("namespace"))
+	_ = viper.BindPFlag("log-level", rootCmd.PersistentFlags().Lookup("log-level"))
 }
 
 func startFastHTTPServer() {
-	// --- 1. Setup controller-runtime logger ---
+	// --- 0. Загрузить config.yaml, если есть ---
+	if configFile := viper.ConfigFileUsed(); configFile == "" {
+		// По умолчанию читаем config.yaml из cwd
+		viper.SetConfigName("config")
+		viper.SetConfigType("yaml")
+		viper.AddConfigPath(".")
+		_ = viper.ReadInConfig() // не fail, если нет файла
+	}
+
+	// --- 1. Считываем параметры ---
+	metricsPort := viper.GetInt("metricsPort")
+	leaderElection := viper.GetBool("enableLeaderElection")
+	namespace := viper.GetString("namespace")
+
+	// --- 2. Setup controller-runtime logger ---
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
-	// --- 2. Setup controller-runtime manager ---
+	// --- 3. Setup controller-runtime manager ---
 	scheme := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(appsv1.AddToScheme(scheme))
@@ -56,22 +83,26 @@ func startFastHTTPServer() {
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: scheme,
 		Metrics: server.Options{
-			BindAddress: ":8081", // metrics server
+			BindAddress: fmt.Sprintf(":%d", metricsPort),
 		},
+		LeaderElection:   leaderElection,
+		LeaderElectionID: "k8s-controllers-lock",
+		// Namespace:     // НЕ поддерживается в v0.18.2!
 	})
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to start controller-runtime manager")
 	}
 
-	// --- 3. Register the Deployment controller ---
+	// --- 4. Register the Deployment controller с фильтрацией по namespace ---
 	if err := (&controller.DeploymentReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:    mgr.GetClient(),
+		Scheme:    mgr.GetScheme(),
+		Namespace: namespace, // добавим это поле в структуру
 	}).SetupWithManager(mgr); err != nil {
 		log.Fatal().Err(err).Msg("Failed to setup Deployment controller")
 	}
 
-	// --- 4. Start manager in background ---
+	// --- 5. Start manager в фоне ---
 	go func() {
 		log.Info().Msg("🔧 Starting controller-runtime manager")
 		if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
@@ -79,7 +110,7 @@ func startFastHTTPServer() {
 		}
 	}()
 
-	// --- 5. Start FastHTTP server ---
+	// --- 6. FastHTTP server ---
 	r := router.New()
 	r.GET("/", logMiddleware(homeHandler))
 	r.POST("/post", logMiddleware(postHandler))
@@ -131,7 +162,6 @@ func healthHandler(ctx *fasthttp.RequestCtx) {
 	ctx.SetBodyString("OK")
 }
 
-// deploymentsHandler returns cached Deployment names from informer (if informer used)
 func deploymentsHandler(ctx *fasthttp.RequestCtx) {
 	store := GetDeploymentStore()
 	if store == nil {
