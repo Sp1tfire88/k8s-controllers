@@ -3,14 +3,5 @@ resources:
 
 images:
   - name: your-dockerhub-username/controller  
-    newName: ghcr.io/your-org/controller      
-    newTag: latest                           
-
-# configMapGenerator:
-#   - name: controller-config
-#     literals:
-#       - log-level=debug
-#       - metrics-port=9090
-
-# # patches:
-# #   - path: patch-deployment.yaml
+    newName: ghcr.io/your-org/controller     
+    newTag: latest                        

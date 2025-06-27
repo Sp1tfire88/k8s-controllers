@@ -74,7 +74,6 @@ jobs:
           docker build -t $IMAGE .
           echo "IMAGE_NAME=$IMAGE" >> $GITHUB_ENV
 
-
   patch-kustomize-image:
     name: Patch kustomize image tag
     runs-on: ubuntu-latest
@@ -87,6 +86,22 @@ jobs:
           TAG="${{ github.sha }}"
           sed -i "s|newName:.*|newName: $IMAGE|" kustomize/overlays/dev/kustomization.yaml
           sed -i "s|newTag:.*|newTag: $TAG|" kustomize/overlays/dev/kustomization.yaml
+
+  kustomize-validate:
+    name: Validate Kustomize manifests
+    runs-on: ubuntu-latest
+    needs: patch-kustomize-image
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install kustomize
+        run: |
+          if ! command -v kustomize &>/dev/null; then
+            curl -sSfL https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.2/kustomize_v5.4.2_linux_amd64.tar.gz | tar -xz
+            sudo mv kustomize /usr/local/bin/kustomize
+          fi
+      - name: Kustomize build overlays/dev
+        run: kustomize build kustomize/overlays/dev/
+
 
 
 
@@ -109,22 +124,3 @@ jobs:
   #         ignore-unfixed: true
   #         vuln-type: 'os,library'
   #         severity: 'MEDIUM,HIGH,CRITICAL'
-
-  kustomize-validate:
-    name: Validate Kustomize manifests
-    runs-on: ubuntu-latest
-    needs: patch-kustomize-image
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install kustomize, yamllint
-        run: |
-          if ! command -v kustomize &>/dev/null; then
-            curl -sSfL https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.2/kustomize_v5.4.2_linux_amd64.tar.gz | tar -xz
-            sudo mv kustomize /usr/local/bin/kustomize
-          else
-            echo "kustomize already installed: $(kustomize version)"
-          fi
-
-      - name: Kustomize build dev overlay
-        run: kustomize build kustomize/overlays/dev/
