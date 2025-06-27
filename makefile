@@ -52,6 +52,46 @@
 # 	go test -v -coverprofile=$(COVERAGE_FILE) ./cmd
 # 	go tool cover -func=$(COVERAGE_FILE)
 # 	go tool cover -html=$(COVERAGE_FILE) -o $(COVERAGE_DIR)/coverage.html
+############################################################################################
+# APP_NAME = controller
+# BUILD_DIR = build
+# DOCKER_IMAGE = $(APP_NAME)
+# TAG = latest
+# COVERAGE_DIR = coverage
+# COVERAGE_FILE = $(COVERAGE_DIR)/coverage.out
+
+# .PHONY: all build run clean test docker coverage
+
+# all: build
+
+# build:
+# 	@mkdir -p $(BUILD_DIR)
+# 	go build -o $(BUILD_DIR)/$(APP_NAME) main.go
+
+# run: build
+# 	./$(BUILD_DIR)/$(APP_NAME)
+
+# clean:
+# 	rm -rf $(BUILD_DIR) $(COVERAGE_DIR)
+
+# test:
+# 	go test -v ./...
+# 	go test ./pkg/controller
+
+# coverage:
+# 	@mkdir -p $(COVERAGE_DIR)
+# 	go test -v -coverprofile=$(COVERAGE_FILE) ./cmd
+# 	go tool cover -func=$(COVERAGE_FILE)
+# 	go tool cover -html=$(COVERAGE_FILE) -o $(COVERAGE_DIR)/coverage.html
+
+# docker:
+# 	docker build -t $(DOCKER_IMAGE):$(TAG) .
+
+# # Линтинг (можно вызывать в GitHub Actions)
+# lint:
+# 	golangci-lint run
+
+
 
 APP_NAME = controller
 BUILD_DIR = build
@@ -74,9 +114,9 @@ run: build
 clean:
 	rm -rf $(BUILD_DIR) $(COVERAGE_DIR)
 
-test:
+test: build
 	go test -v ./...
-	go test ./pkg/controller
+	go test -v ./pkg/controller
 
 coverage:
 	@mkdir -p $(COVERAGE_DIR)
