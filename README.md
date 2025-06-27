@@ -46,4 +46,4 @@ The project uses GitHub Actions and provides a full pipeline:
 * Trivy security scan
 * helm lint
 * kustomize generate
-* integration tests (leader election, metrics, API)
+* integration tests
