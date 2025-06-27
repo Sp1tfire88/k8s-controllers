@@ -1,36 +1,49 @@
-# k8s-controller
-## Step 10 — Leader Election and Metrics for Controller Manager
+# k8s-controllers: Production-Ready Kubernetes Controller Example
 
+**k8s-controllers** is a demonstration project of an advanced custom Kubernetes controller written in Go, using controller-runtime, FastHTTP REST API, cluster informer, full-featured CI, Helm/Kustomize manifests, leader election, metrics, and test coverage.
 
+---
 
-$ go run main.go server
+## 📦 Features
+
+- **Go controller-runtime controller**
+    - Reconciliation logic for Deployments (logs CRUD events).
+    - Integrated FastHTTP REST API (`/deployments` endpoint returns Deployments from the informer's cache, not the live API).
+- **Leader Election & Metrics**
+    - CLI/config flags for leader election and metrics (`--enable-leader-election`, `--metrics-port`).
+    - Prometheus endpoint exposed for metrics.
+- **Helm & Kustomize** charts and CI validation.
+- **Complete CI pipeline**: lint, test, build, docker, security scan, kustomize/helm validation, integration tests.
+- **Configurable via CLI flags & `config.yaml`**.
+- **Full test coverage**: unit, integration, and end-to-end tests (including leader election and API endpoints).
+---
+
+## 🚀 Quick Start
+
+### 1. **Build & Run**
+```bash
+make build
+./build/controller server --log-level trace --kubeconfig ~/.kube/config
 ```
-Using config file: /workspaces/k8s-controllers/config.yaml
-{"level":"info","env":"dev","version":"v0.1.0","time":"2025-06-27T10:24:45Z","message":"🚀 Starting FastHTTP server on :8080"}
-{"level":"info","env":"dev","version":"v0.1.0","time":"2025-06-27T10:24:45Z","message":"🔧 Starting controller-runtime manager"}
-2025-06-27T10:24:45Z    INFO    controller-runtime.metrics      Starting metrics server
-2025-06-27T10:24:45Z    INFO    controller-runtime.metrics      Serving metrics server  {"bindAddress": ":9091", "secure": false}
-2025-06-27T10:24:45Z    INFO    Starting EventSource    {"controller": "deployment", "controllerGroup": "apps", "controllerKind": "Deployment", "source": "kind source: *v1.Deployment"}
-2025-06-27T10:24:45Z    INFO    Starting Controller     {"controller": "deployment", "controllerGroup": "apps", "controllerKind": "Deployment"}
-2025-06-27T10:24:45Z    INFO    Starting workers        {"controller": "deployment", "controllerGroup": "apps", "controllerKind": "Deployment", "worker count": 1}
+Or using config file:
 ```
+curl http://localhost:8080/deployments
+# Example output: ["nginx-deployment","test-app", ...] (deployments from the informer's cache!)
+```
+| Parameter        | CLI Flag                 | config.yaml          | Default Value   |
+| ---------------- | ------------------------ | -------------------- | --------------- |
+| kubeconfig       | --kubeconfig             | kubeconfig           | \~/.kube/config |
+| Logging          | --log-level              | log-level            | info            |
+| REST port        | --port                   | port                 | 8080            |
+| Metrics port     | --metrics-port           | metricsPort          | 8081            |
+| Leader election  | --enable-leader-election | enableLeaderElection | false            |
 
-
-$ curl http://localhost:9091/metrics | head -n 10
-```
-# HELP certwatcher_read_certificate_errors_total Total number of certificate read errors
-# TYPE certwatcher_read_certificate_errors_total counter
-certwatcher_read_certificate_errors_total 0
-# HELP certwatcher_read_certificate_total Total number of certificate reads
-# TYPE certwatcher_read_certificate_total counter
-certwatcher_read_certificate_total 0
-# HELP controller_runtime_active_workers Number of currently used workers per controller
-# TYPE controller_runtime_active_workers gauge
-controller_runtime_active_workers{controller="deployment"} 0
-# HELP controller_runtime_max_concurrent_reconciles Maximum number of concurrent reconciles per controller
-# TYPE controller_runtime_max_concurrent_reconciles gauge
-controller_runtime_max_concurrent_reconciles{controller="deployment"} 1
-# HELP controller_runtime_reconcile_errors_total Total number of reconciliation errors per controller
-# TYPE controller_runtime_reconcile_errors_total counter
-controller_runtime_reconcile_errors_total{controller="deployment"} 0
-```
+🏗️ CI: Lint, Test, Security
+The project uses GitHub Actions and provides a full pipeline:
+* golangci-lint
+* go test + coverage
+* docker build
+* Trivy security scan
+* helm lint
+* kustomize generate
+* integration tests (leader election, metrics, API)
