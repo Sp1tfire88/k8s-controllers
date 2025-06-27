@@ -3,5 +3,5 @@ resources:
 
 images:
   - name: your-dockerhub-username/controller  
-    newName: ghcr.io/your-org/controller     
-    newTag: latest                        
+    newName: ghcr.io/sp1tfire88/k8s-controllers
+    newTag: 123456789abcdef
