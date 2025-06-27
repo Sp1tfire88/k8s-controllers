@@ -8,8 +8,8 @@ informer:
 
 clusters:
   - name: cluster-a
-    kubeconfig: "/home/user/.kube/cluster-a.yaml"
+    kubeconfig: "/home/codespace/.kube/cluster-a.yaml"
     namespace: default
   - name: cluster-b
-    kubeconfig: "/home/user/.kube/cluster-b.yaml"
+    kubeconfig: "/home/codespace/.kube/cluster-b.yaml"
     namespace: kube-system

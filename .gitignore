@@ -4,3 +4,4 @@ kubebuilder/bin/
 *.swp
 etcd/
 scripts/clusters/*
+build/*

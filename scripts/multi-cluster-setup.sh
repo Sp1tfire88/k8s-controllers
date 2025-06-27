@@ -38,6 +38,10 @@ esac
 
 echo "Setting up Kubernetes cluster: $CLUSTER_NAME (ports: API=$API_SERVER_PORT, ETCD=$ETCD_CLIENT_PORT)"
 
+# Get current user and group
+CURRENT_USER=$(whoami)
+CURRENT_GROUP=$(id -gn)
+
 # Cluster-specific directories
 CLUSTER_DIR="./clusters/$CLUSTER_NAME"
 KUBEBUILDER_DIR="$CLUSTER_DIR/kubebuilder"
@@ -70,15 +74,40 @@ stop_process() {
     sleep 2
 }
 
+# Function to create directory with proper permissions
+create_user_dir() {
+    local dir_path="$1"
+    local permissions="${2:-755}"
+    
+    if [ ! -d "$dir_path" ]; then
+        mkdir -p "$dir_path"
+        chmod "$permissions" "$dir_path"
+        # Ensure parent directories are also owned by user
+        chown -R "$CURRENT_USER:$CURRENT_GROUP" "$dir_path"
+    fi
+}
+
+# Function to create directory with sudo but set proper ownership
+create_sudo_dir() {
+    local dir_path="$1"
+    local permissions="${2:-755}"
+    
+    if [ ! -d "$dir_path" ]; then
+        sudo mkdir -p "$dir_path"
+        sudo chmod "$permissions" "$dir_path"
+        sudo chown -R "$CURRENT_USER:$CURRENT_GROUP" "$dir_path"
+    fi
+}
+
 download_components() {
-    # Create necessary directories if they don't exist
-    sudo mkdir -p $KUBEBUILDER_DIR/bin
-    sudo mkdir -p $CLUSTER_DIR/etc/cni/net.d
-    sudo mkdir -p $KUBELET_DIR
-    sudo mkdir -p $CLUSTER_DIR/etc/kubernetes/manifests
-    sudo mkdir -p $CLUSTER_DIR/var/log/kubernetes
-    sudo mkdir -p $CLUSTER_DIR/etc/containerd/
-    sudo mkdir -p $CONTAINERD_DIR/run
+    # Create necessary directories with proper permissions
+    create_sudo_dir "$KUBEBUILDER_DIR/bin" 755
+    create_sudo_dir "$CLUSTER_DIR/etc/cni/net.d" 755
+    create_user_dir "$KUBELET_DIR" 755
+    create_sudo_dir "$CLUSTER_DIR/etc/kubernetes/manifests" 755
+    create_sudo_dir "$CLUSTER_DIR/var/log/kubernetes" 755
+    create_sudo_dir "$CLUSTER_DIR/etc/containerd/" 755
+    create_user_dir "$CONTAINERD_DIR/run" 755
 
     # Download kubebuilder tools if not present
     if [ ! -f "$KUBEBUILDER_DIR/bin/etcd" ]; then
@@ -87,12 +116,14 @@ download_components() {
         sudo tar -C $KUBEBUILDER_DIR --strip-components=1 -zxf /tmp/kubebuilder-tools-$CLUSTER_ID.tar.gz
         rm /tmp/kubebuilder-tools-$CLUSTER_ID.tar.gz
         sudo chmod -R 755 $KUBEBUILDER_DIR/bin
+        sudo chown -R "$CURRENT_USER:$CURRENT_GROUP" $KUBEBUILDER_DIR
     fi
 
     if [ ! -f "$KUBEBUILDER_DIR/bin/kubelet" ]; then
         echo "Downloading kubelet for $CLUSTER_NAME..."
         sudo curl -L "https://dl.k8s.io/v1.30.0/bin/linux/amd64/kubelet" -o $KUBEBUILDER_DIR/bin/kubelet
         sudo chmod 755 $KUBEBUILDER_DIR/bin/kubelet
+        sudo chown "$CURRENT_USER:$CURRENT_GROUP" $KUBEBUILDER_DIR/bin/kubelet
     fi
 
     # Install CNI components if not present (shared across clusters)
@@ -124,6 +155,9 @@ download_components() {
         sudo chmod 755 $KUBEBUILDER_DIR/bin/kube-controller-manager
         sudo chmod 755 $KUBEBUILDER_DIR/bin/kube-scheduler
         sudo chmod 755 $KUBEBUILDER_DIR/bin/cloud-controller-manager
+        sudo chown "$CURRENT_USER:$CURRENT_GROUP" $KUBEBUILDER_DIR/bin/kube-controller-manager
+        sudo chown "$CURRENT_USER:$CURRENT_GROUP" $KUBEBUILDER_DIR/bin/kube-scheduler
+        sudo chown "$CURRENT_USER:$CURRENT_GROUP" $KUBEBUILDER_DIR/bin/cloud-controller-manager
     fi
 }
 
@@ -132,29 +166,41 @@ setup_configs() {
     if [ ! -f "$CLUSTER_DIR/sa.key" ]; then
         openssl genrsa -out $CLUSTER_DIR/sa.key 2048
         openssl rsa -in $CLUSTER_DIR/sa.key -pubout -out $CLUSTER_DIR/sa.pub
+        chmod 600 $CLUSTER_DIR/sa.key
+        chmod 644 $CLUSTER_DIR/sa.pub
     fi
 
     if [ ! -f "$CLUSTER_DIR/token.csv" ]; then
         TOKEN="1234567890-$CLUSTER_ID"
         echo "${TOKEN},admin,admin,system:masters" > $CLUSTER_DIR/token.csv
+        chmod 644 $CLUSTER_DIR/token.csv
     fi
 
     # Always regenerate and copy CA certificate to ensure it exists
     echo "Generating CA certificate for $CLUSTER_NAME..."
     openssl genrsa -out $CLUSTER_DIR/ca.key 2048
     openssl req -x509 -new -nodes -key $CLUSTER_DIR/ca.key -subj "/CN=kubelet-ca-$CLUSTER_NAME" -days 365 -out $CLUSTER_DIR/ca.crt
-    sudo mkdir -p $KUBELET_DIR/pki
-    sudo cp $CLUSTER_DIR/ca.crt $KUBELET_DIR/ca.crt
-    sudo cp $CLUSTER_DIR/ca.crt $KUBELET_DIR/pki/ca.crt
+    chmod 600 $CLUSTER_DIR/ca.key
+    chmod 644 $CLUSTER_DIR/ca.crt
+    
+    # Create kubelet pki directory and copy certificates
+    create_user_dir "$KUBELET_DIR/pki" 755
+    cp $CLUSTER_DIR/ca.crt $KUBELET_DIR/ca.crt
+    cp $CLUSTER_DIR/ca.crt $KUBELET_DIR/pki/ca.crt
+    chmod 644 $KUBELET_DIR/ca.crt
+    chmod 644 $KUBELET_DIR/pki/ca.crt
 
     # Set up kubeconfig for this cluster
-    mkdir -p $KUBE_CONFIG_DIR
+    create_user_dir "$KUBE_CONFIG_DIR" 755
     export KUBECONFIG=$KUBE_CONFIG_DIR/config
     
     $KUBEBUILDER_DIR/bin/kubectl config set-credentials $CLUSTER_NAME-user --token=1234567890-$CLUSTER_ID
     $KUBEBUILDER_DIR/bin/kubectl config set-cluster $CLUSTER_NAME --server=https://127.0.0.1:$API_SERVER_PORT --insecure-skip-tls-verify
     $KUBEBUILDER_DIR/bin/kubectl config set-context $CLUSTER_NAME-context --cluster=$CLUSTER_NAME --user=$CLUSTER_NAME-user --namespace=default 
     $KUBEBUILDER_DIR/bin/kubectl config use-context $CLUSTER_NAME-context
+    
+    # Ensure kubeconfig has proper permissions
+    chmod 644 $KUBE_CONFIG_DIR/config
 
     # Configure CNI with cluster-specific subnet
     SUBNET_BASE=$((200 + CLUSTER_ID))  # cluster-a=200, cluster-b=201, etc.
@@ -175,6 +221,7 @@ setup_configs() {
     }
 }
 EOF
+    sudo chown "$CURRENT_USER:$CURRENT_GROUP" $CLUSTER_DIR/etc/cni/net.d/10-mynet.conf
 
     # Configure containerd with cluster-specific socket
     cat <<EOF | sudo tee $CLUSTER_DIR/etc/containerd/config.toml
@@ -207,13 +254,13 @@ version = 3
   root = "$CONTAINERD_DIR/lib"
   state = "$CONTAINERD_DIR/run"
 EOF
+    sudo chown "$CURRENT_USER:$CURRENT_GROUP" $CLUSTER_DIR/etc/containerd/config.toml
 
     # Ensure containerd data directory exists with correct permissions
-    sudo mkdir -p $CONTAINERD_DIR/lib
-    sudo chmod 711 $CONTAINERD_DIR/lib
+    create_user_dir "$CONTAINERD_DIR/lib" 755
 
     # Configure kubelet
-    cat << EOF | sudo tee $KUBELET_DIR/config.yaml
+    cat << EOF > $KUBELET_DIR/config.yaml
 apiVersion: kubelet.config.k8s.io/v1beta1
 kind: KubeletConfiguration
 authentication:
@@ -240,31 +287,28 @@ readOnlyPort: 0
 EOF
 
     # Create required directories with proper permissions
-    sudo mkdir -p $KUBELET_DIR/pods
-    sudo chmod 750 $KUBELET_DIR/pods
-    sudo mkdir -p $KUBELET_DIR/plugins
-    sudo chmod 750 $KUBELET_DIR/plugins
-    sudo mkdir -p $KUBELET_DIR/plugins_registry
-    sudo chmod 750 $KUBELET_DIR/plugins_registry
+    create_user_dir "$KUBELET_DIR/pods" 750
+    create_user_dir "$KUBELET_DIR/plugins" 750
+    create_user_dir "$KUBELET_DIR/plugins_registry" 750
 
     # Ensure proper permissions
-    sudo chmod 644 $KUBELET_DIR/ca.crt
-    sudo chmod 644 $KUBELET_DIR/config.yaml
+    chmod 644 $KUBELET_DIR/ca.crt
+    chmod 644 $KUBELET_DIR/config.yaml
 
     # Generate self-signed kubelet serving certificate if not present
     if [ ! -f "$KUBELET_DIR/pki/kubelet.crt" ] || [ ! -f "$KUBELET_DIR/pki/kubelet.key" ]; then
         echo "Generating self-signed kubelet serving certificate for $CLUSTER_NAME..."
-        sudo openssl req -x509 -newkey rsa:2048 -nodes \
+        openssl req -x509 -newkey rsa:2048 -nodes \
             -keyout $KUBELET_DIR/pki/kubelet.key \
             -out $KUBELET_DIR/pki/kubelet.crt \
             -days 365 \
             -subj "/CN=$(hostname)-$CLUSTER_NAME"
-        sudo chmod 600 $KUBELET_DIR/pki/kubelet.key
-        sudo chmod 644 $KUBELET_DIR/pki/kubelet.crt
+        chmod 600 $KUBELET_DIR/pki/kubelet.key
+        chmod 644 $KUBELET_DIR/pki/kubelet.crt
     fi
 
     # Create kubeconfig for kubelet
-    cat << EOF | sudo tee $KUBELET_DIR/kubeconfig
+    cat << EOF > $KUBELET_DIR/kubeconfig
 apiVersion: v1
 kind: Config
 clusters:
@@ -283,6 +327,7 @@ users:
   user:
     token: 1234567890-$CLUSTER_ID
 EOF
+    chmod 644 $KUBELET_DIR/kubeconfig
 }
 
 start() {
@@ -441,6 +486,21 @@ status() {
     if [ -f "$KUBE_CONFIG_DIR/config" ]; then
         echo "KUBECONFIG: $KUBE_CONFIG_DIR/config"
         echo "To connect: export KUBECONFIG=$KUBE_CONFIG_DIR/config"
+        echo ""
+        echo "Testing connection:"
+        if [ -r "$KUBE_CONFIG_DIR/config" ]; then
+            echo "✓ Config file is readable"
+            export KUBECONFIG=$KUBE_CONFIG_DIR/config
+            if $KUBEBUILDER_DIR/bin/kubectl cluster-info 2>/dev/null; then
+                echo "✓ Cluster is accessible"
+            else
+                echo "✗ Cluster is not accessible"
+            fi
+        else
+            echo "✗ Config file is not readable"
+        fi
+    else
+        echo "✗ Config file not found"
     fi
 }
 
