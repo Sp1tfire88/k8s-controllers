@@ -1,0 +1,11 @@
+resources:
+  - ../../base
+
+configMapGenerator:
+  - name: controller-config
+    literals:
+      - log-level=debug
+      - metrics-port=9090
+
+patches:
+  - path: patch-deployment.yaml

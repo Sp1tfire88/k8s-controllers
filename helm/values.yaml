@@ -1,0 +1,26 @@
+replicaCount: 1
+
+image:
+  repository: your-dockerhub-username/controller
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8080
+
+resources: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+controller:
+  logLevel: info
+  port: 8080
+  metricsPort: 8081
+  enableLeaderElection: true
+  namespace: default
+  leaderElectionNamespace: default

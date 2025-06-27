@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k8s-controller
+spec:
+  template:
+    spec:
+      containers:
+        - name: controller
+          image: your-dockerhub-username/controller:dev
+          args:
+            - server
+            - --log-level=debug
+            - --port=8080
+            - --metrics-port=9090
+            - --enable-leader-election=false
+            - --namespace=dev

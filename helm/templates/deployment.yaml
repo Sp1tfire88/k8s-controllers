@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "k8s-controller.fullname" . }}
+  labels:
+    app: {{ include "k8s-controller.name" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "k8s-controller.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "k8s-controller.name" . }}
+    spec:
+      containers:
+        - name: controller
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - server
+            - --log-level={{ .Values.controller.logLevel }}
+            - --port={{ .Values.controller.port }}
+            - --metrics-port={{ .Values.controller.metricsPort }}
+            - --enable-leader-election={{ .Values.controller.enableLeaderElection }}
+            - --namespace={{ .Values.controller.namespace }}
+            - --leader-election-namespace={{ .Values.controller.leaderElectionNamespace }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.controller.port }}
+            - name: metrics
+              containerPort: {{ .Values.controller.metricsPort }}
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+      nodeSelector:
+{{ toYaml .Values.nodeSelector | indent 8 }}
+      tolerations:
+{{ toYaml .Values.tolerations | indent 8 }}
+      affinity:
+{{ toYaml .Values.affinity | indent 8 }}

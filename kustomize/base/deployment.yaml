@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k8s-controller
+  labels:
+    app: k8s-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: k8s-controller
+  template:
+    metadata:
+      labels:
+        app: k8s-controller
+    spec:
+      containers:
+        - name: controller
+          image: your-dockerhub-username/controller:latest
+          ports:
+            - containerPort: 8080
+          args:
+            - server
+            - --log-level=info
+            - --port=8080
+            - --metrics-port=8081
+            - --enable-leader-election=false
+            - --namespace=default
