@@ -75,7 +75,7 @@ jobs:
           docker build -t $IMAGE:$TAG .
   patch-kustomize-image:
     runs-on: ubuntu-latest
-    needs: build
+    needs: docker
     steps:
       - uses: actions/checkout@v4
       - run: |
