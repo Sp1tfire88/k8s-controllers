@@ -118,6 +118,9 @@ test: build
 	go test -v ./...
 	go test -v ./pkg/controller
 
+# integration-test: build
+# 	go test -v ./pkg/integration
+
 coverage:
 	@mkdir -p $(COVERAGE_DIR)
 	go test -v -coverprofile=$(COVERAGE_FILE) ./cmd

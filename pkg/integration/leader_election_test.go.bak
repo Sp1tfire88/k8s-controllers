@@ -1,0 +1,115 @@
+package integration
+
+import (
+	"fmt"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"testing"
+	"time"
+)
+
+// findBinPath ищет бинарник относительно корня проекта
+func findBinPath() string {
+	root, _ := os.Getwd()
+	for {
+		if _, err := os.Stat(filepath.Join(root, "build", "controller")); err == nil {
+			return filepath.Join(root, "build", "controller")
+		}
+		next := filepath.Dir(root)
+		if next == root {
+			break
+		}
+		root = next
+	}
+	panic("could not find build/controller binary")
+}
+
+func runWithConfig(config map[string]string, metricsPort int) (cleanup func(), err error) {
+	binPath := findBinPath()
+	args := []string{
+		"server",
+		"--metrics-port",
+		fmt.Sprintf("%d", metricsPort),
+	}
+	for k, v := range config {
+		args = append(args, "--"+k, v)
+	}
+	cmd := exec.Command(binPath, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	err = cmd.Start()
+	if err != nil {
+		return nil, err
+	}
+
+	cleanup = func() {
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+	}
+	return cleanup, nil
+}
+
+func TestLeaderElectionAndMetricsPort(t *testing.T) {
+	// Первый instance: leader election включен, порт 19090
+	config1 := map[string]string{
+		"enable-leader-election": "true",
+	}
+	cleanup1, err := runWithConfig(config1, 19090)
+	if err != nil {
+		t.Fatalf("failed to start first controller: %v", err)
+	}
+	defer cleanup1()
+
+	// Проверка доступности метрик
+	try := 10
+	var resp *http.Response
+	for i := 0; i < try; i++ {
+		resp, err = http.Get("http://localhost:19090/metrics")
+		if err == nil && resp.StatusCode == 200 {
+			resp.Body.Close()
+			break
+		}
+		time.Sleep(300 * time.Millisecond)
+	}
+	if err != nil || resp == nil || resp.StatusCode != 200 {
+		t.Fatalf("metrics endpoint not available: %v", err)
+	}
+
+	// Второй instance: должен НЕ получить лидерство (тот же порт и включен leader election)
+	config2 := map[string]string{
+		"enable-leader-election": "true",
+	}
+	cleanup2, err := runWithConfig(config2, 19090)
+	if err == nil && cleanup2 != nil {
+		defer cleanup2()
+		// Подождём чуть-чуть, второй процесс должен не стать лидером и может завершиться с ошибкой
+		time.Sleep(1 * time.Second)
+		// Не важно, работает или нет, главное не падает основной процесс
+	}
+
+	// Третий instance: leader election выключен, другой порт
+	config3 := map[string]string{
+		"enable-leader-election": "false",
+	}
+	cleanup3, err := runWithConfig(config3, 19091)
+	if err != nil {
+		t.Fatalf("failed to start third controller: %v", err)
+	}
+	defer cleanup3()
+
+	var resp2 *http.Response
+	for i := 0; i < try; i++ {
+		resp2, err = http.Get("http://localhost:19091/metrics")
+		if err == nil && resp2.StatusCode == 200 {
+			resp2.Body.Close()
+			break
+		}
+		time.Sleep(300 * time.Millisecond)
+	}
+	if err != nil || resp2 == nil || resp2.StatusCode != 200 {
+		t.Fatalf("metrics endpoint not available (disabled leader election): %v", err)
+	}
+}
