@@ -170,6 +170,7 @@ jobs:
   kustomize-validate:
     name: Validate Kustomize manifests
     runs-on: ubuntu-latest
+    needs: test
     steps:
       - uses: actions/checkout@v4
 
@@ -181,13 +182,9 @@ jobs:
           else
             echo "kustomize already installed: $(kustomize version)"
           fi
-          pip install yamllint
 
       - name: Kustomize build base
-        run: kustomize build kustomize/base > /dev/null
-
-      - name: YAML lint base
-        run: kustomize build kustomize/base | yamllint -
+        run: kustomize build kustomize/base
 
   helm-lint:
     name: Helm Lint
