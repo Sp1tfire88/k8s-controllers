@@ -73,21 +73,37 @@ jobs:
           IMAGE="ghcr.io/$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')"
           TAG="${{ github.sha }}"
           docker build -t $IMAGE:$TAG .
-  patch-kustomize-image:
+  deploy-dev:
     runs-on: ubuntu-latest
-    needs: docker
+    needs:
+      - docker
     steps:
       - uses: actions/checkout@v4
-      - run: |
-          git config --global user.email "ci-bot@example.com"
-          git config --global user.name "CI Bot"
+      - name: Install kustomize
+        run: |
+          if ! command -v kustomize &>/dev/null; then
+            curl -sSfL https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.2/kustomize_v5.4.2_linux_amd64.tar.gz | tar -xz
+            sudo mv kustomize /usr/local/bin/kustomize
+          else
+            echo "kustomize already installed: $(kustomize version)"
+          fi
+
+      - name: Patch image tag in kustomization.yaml
+        run: |
           IMAGE="ghcr.io/$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')"
           TAG="${{ github.sha }}"
-          sed -i "s|newName:.*|newName: $IMAGE|" kustomize/overlays/dev/kustomization.yaml
-          sed -i "s|newTag:.*|newTag: $TAG|" kustomize/overlays/dev/kustomization.yaml
-          git add kustomize/overlays/dev/kustomization.yaml
-          git commit -m "chore(ci): update image tag to $TAG [skip ci]" || echo "No changes to commit"
+          cd kustomize/overlays/dev
+          kustomize edit set image your-dockerhub-username/controller=$IMAGE:$TAG
+
+      - name: Commit and push manifest update
+        run: |
+          git config user.email "gitops@example.com"
+          git config user.name "gitops"
+          git add kustomization.yaml
+          git commit -m "chore(gitops): update image to $IMAGE:$TAG [skip ci]" || echo "No changes to commit"
+          git pull --rebase
           git push
+
   kustomize-validate:
     runs-on: ubuntu-latest
     needs: patch-kustomize-image
