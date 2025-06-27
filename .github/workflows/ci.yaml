@@ -187,6 +187,21 @@ jobs:
       # - name: Build and validate prod overlay
       #   run: kustomize build kustomize/overlays/prod | kubectl apply --dry-run=client -f -
 
+  helm-lint:
+    name: Helm Lint
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Helm
+        run: |
+          curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+          chmod 700 get_helm.sh
+          ./get_helm.sh
+      - name: Lint Helm chart
+        run: |
+          helm lint helm/controller
+
   build:
     name: Build Binary
     runs-on: ubuntu-latest
